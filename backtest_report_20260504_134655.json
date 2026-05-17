@@ -1,0 +1,6326 @@
+{
+  "full_metrics": {
+    "total_trades": 86,
+    "winners": 38,
+    "losers": 48,
+    "win_rate_pct": 44.19,
+    "avg_win": 8426.01,
+    "avg_loss": 6719.72,
+    "profit_factor": 0.99,
+    "total_return_pct": -0.24,
+    "cagr_pct": -0.05,
+    "max_drawdown_pct": 8.78,
+    "sharpe_ratio": 0.01
+  },
+  "train_trades": 58,
+  "test_trades": 28,
+  "train_win_rate": 48.28,
+  "test_win_rate": 35.71,
+  "train_cagr": 1.67,
+  "split": {
+    "train_start": "2021-02-04",
+    "train_end": "2024-10-03",
+    "test_start": "2024-10-04",
+    "test_end": "2026-04-30"
+  },
+  "validation": {
+    "valid": false,
+    "rules": {
+      "CAGR > 15%": false,
+      "Win rate > 40%": true,
+      "Max drawdown < 25%": true,
+      "Profit factor >= 1.5": false
+    },
+    "verdict": "STRATEGY INVALID \u2014 Requires tuning"
+  },
+  "trades": [
+    {
+      "symbol": "BHARTIARTL.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2021-11-29",
+      "exit_date": "2021-12-06",
+      "entry": 734.97,
+      "exit": 681.81,
+      "shares": 223,
+      "pnl": -11856.53,
+      "pnl_pct": -7.23,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "ITC.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2021-12-14",
+      "exit_date": "2021-12-16",
+      "entry": 190.08,
+      "exit": 179.49,
+      "shares": 933,
+      "pnl": -9878.3,
+      "pnl_pct": -5.57,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "LT.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2021-12-24",
+      "exit_date": "2022-01-17",
+      "entry": 1812.6,
+      "exit": 1978.73,
+      "shares": 104,
+      "pnl": 17277.3,
+      "pnl_pct": 9.17,
+      "reason": "Target Hit",
+      "phase": "train"
+    },
+    {
+      "symbol": "INFY.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-01-12",
+      "exit_date": "2022-01-21",
+      "entry": 1677.72,
+      "exit": 1597.96,
+      "shares": 94,
+      "pnl": -7497.65,
+      "pnl_pct": -4.75,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "MARUTI.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-01-19",
+      "exit_date": "2022-01-25",
+      "entry": 7647.91,
+      "exit": 7882.74,
+      "shares": 21,
+      "pnl": 4931.53,
+      "pnl_pct": 3.07,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "LT.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-02-03",
+      "exit_date": "2022-02-07",
+      "entry": 1901.61,
+      "exit": 1808.52,
+      "shares": 87,
+      "pnl": -8098.78,
+      "pnl_pct": -4.9,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "BHARTIARTL.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-02-01",
+      "exit_date": "2022-02-14",
+      "entry": 716.4,
+      "exit": 671.56,
+      "shares": 221,
+      "pnl": -9910.69,
+      "pnl_pct": -6.26,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "SBIN.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-02-14",
+      "exit_date": "2022-02-24",
+      "entry": 479.59,
+      "exit": 440.15,
+      "shares": 344,
+      "pnl": -13566.62,
+      "pnl_pct": -8.22,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "MARUTI.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-02-16",
+      "exit_date": "2022-02-24",
+      "entry": 8410.86,
+      "exit": 7907.53,
+      "shares": 16,
+      "pnl": -8053.33,
+      "pnl_pct": -5.98,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "AXISBANK.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-02-21",
+      "exit_date": "2022-02-24",
+      "entry": 780.29,
+      "exit": 727.26,
+      "shares": 173,
+      "pnl": -9173.95,
+      "pnl_pct": -6.8,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "HCLTECH.NS",
+      "setup": "Weinstein Pullback",
+      "entry_date": "2022-03-14",
+      "exit_date": "2022-03-28",
+      "entry": 996.41,
+      "exit": 967.09,
+      "shares": 189,
+      "pnl": -5541.94,
+      "pnl_pct": -2.94,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "TITAN.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-03-25",
+      "exit_date": "2022-03-28",
+      "entry": 2596.92,
+      "exit": 2454.36,
+      "shares": 43,
+      "pnl": -6130.07,
+      "pnl_pct": -5.49,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "RELIANCE.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-03-15",
+      "exit_date": "2022-04-18",
+      "entry": 1104.75,
+      "exit": 1155.41,
+      "shares": 121,
+      "pnl": 6130.29,
+      "pnl_pct": 4.59,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "BAJFINANCE.NS",
+      "setup": "Weinstein Pullback",
+      "entry_date": "2022-04-06",
+      "exit_date": "2022-04-20",
+      "entry": 721.14,
+      "exit": 689.99,
+      "shares": 221,
+      "pnl": -6884.46,
+      "pnl_pct": -4.32,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "RELIANCE.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-04-26",
+      "exit_date": "2022-05-09",
+      "entry": 1233.08,
+      "exit": 1145.86,
+      "shares": 97,
+      "pnl": -8460.91,
+      "pnl_pct": -7.07,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "ITC.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-04-21",
+      "exit_date": "2022-06-16",
+      "entry": 215.1,
+      "exit": 221.19,
+      "shares": 866,
+      "pnl": 5276.58,
+      "pnl_pct": 2.83,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "AXISBANK.NS",
+      "setup": "Weinstein Pullback",
+      "entry_date": "2022-07-29",
+      "exit_date": "2022-08-23",
+      "entry": 731.96,
+      "exit": 731.96,
+      "shares": 253,
+      "pnl": -0.24,
+      "pnl_pct": -0.0,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "ASIANPAINT.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-08-24",
+      "exit_date": "2022-08-29",
+      "entry": 3234.72,
+      "exit": 3138.2,
+      "shares": 43,
+      "pnl": -4150.4,
+      "pnl_pct": -2.98,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "AXISBANK.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-08-26",
+      "exit_date": "2022-09-12",
+      "entry": 746.02,
+      "exit": 796.63,
+      "shares": 152,
+      "pnl": 7692.16,
+      "pnl_pct": 6.78,
+      "reason": "Target Hit",
+      "phase": "train"
+    },
+    {
+      "symbol": "ASIANPAINT.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-09-06",
+      "exit_date": "2022-09-19",
+      "entry": 3312.6,
+      "exit": 3165.37,
+      "shares": 28,
+      "pnl": -4122.31,
+      "pnl_pct": -4.44,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "ICICIBANK.NS",
+      "setup": "VCP Breakout",
+      "entry_date": "2022-08-11",
+      "exit_date": "2022-09-26",
+      "entry": 839.27,
+      "exit": 840.25,
+      "shares": 108,
+      "pnl": 105.39,
+      "pnl_pct": 0.12,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "BAJFINANCE.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-08-23",
+      "exit_date": "2022-09-26",
+      "entry": 697.67,
+      "exit": 714.86,
+      "shares": 187,
+      "pnl": 3213.29,
+      "pnl_pct": 2.46,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "MARUTI.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-09-05",
+      "exit_date": "2022-09-26",
+      "entry": 8641.0,
+      "exit": 8577.85,
+      "shares": 13,
+      "pnl": -821.04,
+      "pnl_pct": -0.73,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "ITC.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-09-27",
+      "exit_date": "2022-11-09",
+      "entry": 284.24,
+      "exit": 305.98,
+      "shares": 654,
+      "pnl": 14221.07,
+      "pnl_pct": 7.65,
+      "reason": "Target Hit",
+      "phase": "train"
+    },
+    {
+      "symbol": "MARUTI.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-11-03",
+      "exit_date": "2022-12-06",
+      "entry": 8941.98,
+      "exit": 8463.67,
+      "shares": 13,
+      "pnl": -6218.09,
+      "pnl_pct": -5.35,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "BHARTIARTL.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2022-10-07",
+      "exit_date": "2022-12-23",
+      "entry": 777.51,
+      "exit": 793.85,
+      "shares": 184,
+      "pnl": 3006.64,
+      "pnl_pct": 2.1,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "SBIN.NS",
+      "setup": "VCP Breakout",
+      "entry_date": "2022-11-09",
+      "exit_date": "2023-01-27",
+      "entry": 587.32,
+      "exit": 510.67,
+      "shares": 88,
+      "pnl": -6745.59,
+      "pnl_pct": -13.05,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "LT.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2023-01-25",
+      "exit_date": "2023-01-30",
+      "entry": 2139.31,
+      "exit": 2045.99,
+      "shares": 66,
+      "pnl": -6159.31,
+      "pnl_pct": -4.36,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "HDFCBANK.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2023-02-07",
+      "exit_date": "2023-02-27",
+      "entry": 798.45,
+      "exit": 760.39,
+      "shares": 151,
+      "pnl": -5747.03,
+      "pnl_pct": -4.77,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "HCLTECH.NS",
+      "setup": "VCP Breakout",
+      "entry_date": "2023-01-19",
+      "exit_date": "2023-03-24",
+      "entry": 964.35,
+      "exit": 916.34,
+      "shares": 184,
+      "pnl": -8834.65,
+      "pnl_pct": -4.98,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "ULTRACEMCO.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2023-02-02",
+      "exit_date": "2023-04-21",
+      "entry": 6981.78,
+      "exit": 7232.85,
+      "shares": 21,
+      "pnl": 5272.56,
+      "pnl_pct": 3.6,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "ICICIBANK.NS",
+      "setup": "Weinstein Pullback",
+      "entry_date": "2023-04-20",
+      "exit_date": "2023-05-19",
+      "entry": 870.69,
+      "exit": 929.09,
+      "shares": 176,
+      "pnl": 10277.73,
+      "pnl_pct": 6.71,
+      "reason": "Target Hit",
+      "phase": "train"
+    },
+    {
+      "symbol": "KOTAKBANK.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2023-06-07",
+      "exit_date": "2023-06-08",
+      "entry": 393.19,
+      "exit": 374.77,
+      "shares": 325,
+      "pnl": -5986.74,
+      "pnl_pct": -4.68,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "SBIN.NS",
+      "setup": "Weinstein Pullback",
+      "entry_date": "2023-05-12",
+      "exit_date": "2023-07-20",
+      "entry": 543.53,
+      "exit": 580.02,
+      "shares": 281,
+      "pnl": 10252.78,
+      "pnl_pct": 6.71,
+      "reason": "Target Hit",
+      "phase": "train"
+    },
+    {
+      "symbol": "RELIANCE.NS",
+      "setup": "VCP Breakout",
+      "entry_date": "2023-06-19",
+      "exit_date": "2023-07-24",
+      "entry": 1179.59,
+      "exit": 1230.22,
+      "shares": 107,
+      "pnl": 5417.36,
+      "pnl_pct": 4.29,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "BAJFINANCE.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2023-07-12",
+      "exit_date": "2023-08-03",
+      "entry": 738.7,
+      "exit": 701.55,
+      "shares": 136,
+      "pnl": -5052.48,
+      "pnl_pct": -5.03,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "ITC.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2023-07-25",
+      "exit_date": "2023-08-03",
+      "entry": 412.57,
+      "exit": 401.07,
+      "shares": 285,
+      "pnl": -3276.18,
+      "pnl_pct": -2.79,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "HCLTECH.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2023-07-21",
+      "exit_date": "2023-09-04",
+      "entry": 996.16,
+      "exit": 1087.1,
+      "shares": 114,
+      "pnl": 10366.81,
+      "pnl_pct": 9.13,
+      "reason": "Target Hit",
+      "phase": "train"
+    },
+    {
+      "symbol": "BHARTIARTL.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2023-06-06",
+      "exit_date": "2023-09-15",
+      "entry": 819.23,
+      "exit": 918.08,
+      "shares": 167,
+      "pnl": 16507.61,
+      "pnl_pct": 12.07,
+      "reason": "Target Hit",
+      "phase": "train"
+    },
+    {
+      "symbol": "HCLTECH.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2023-10-19",
+      "exit_date": "2023-12-11",
+      "entry": 1136.88,
+      "exit": 1240.77,
+      "shares": 168,
+      "pnl": 17453.13,
+      "pnl_pct": 9.14,
+      "reason": "Target Hit",
+      "phase": "train"
+    },
+    {
+      "symbol": "NESTLEIND.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2023-10-27",
+      "exit_date": "2023-12-28",
+      "entry": 1143.98,
+      "exit": 1262.29,
+      "shares": 134,
+      "pnl": 15853.93,
+      "pnl_pct": 10.34,
+      "reason": "Target Hit",
+      "phase": "train"
+    },
+    {
+      "symbol": "WIPRO.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-01-05",
+      "exit_date": "2024-01-15",
+      "entry": 212.83,
+      "exit": 230.76,
+      "shares": 804,
+      "pnl": 14417.19,
+      "pnl_pct": 8.43,
+      "reason": "Target Hit",
+      "phase": "train"
+    },
+    {
+      "symbol": "NESTLEIND.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-01-09",
+      "exit_date": "2024-01-18",
+      "entry": 1289.84,
+      "exit": 1222.42,
+      "shares": 86,
+      "pnl": -5798.43,
+      "pnl_pct": -5.23,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "HCLTECH.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2023-12-22",
+      "exit_date": "2024-02-06",
+      "entry": 1296.52,
+      "exit": 1473.36,
+      "shares": 104,
+      "pnl": 18391.49,
+      "pnl_pct": 13.64,
+      "reason": "Target Hit",
+      "phase": "train"
+    },
+    {
+      "symbol": "ICICIBANK.NS",
+      "setup": "Breakout",
+      "entry_date": "2024-01-24",
+      "exit_date": "2024-02-08",
+      "entry": 1012.85,
+      "exit": 971.14,
+      "shares": 145,
+      "pnl": -6047.67,
+      "pnl_pct": -4.12,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "WIPRO.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-01-24",
+      "exit_date": "2024-02-28",
+      "entry": 220.76,
+      "exit": 241.78,
+      "shares": 532,
+      "pnl": 11183.78,
+      "pnl_pct": 9.52,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "ULTRACEMCO.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-01-05",
+      "exit_date": "2024-03-06",
+      "entry": 9977.21,
+      "exit": 9507.78,
+      "shares": 13,
+      "pnl": -6102.65,
+      "pnl_pct": -4.71,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "BHARTIARTL.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-03-05",
+      "exit_date": "2024-03-19",
+      "entry": 1117.43,
+      "exit": 1210.85,
+      "shares": 159,
+      "pnl": 14853.91,
+      "pnl_pct": 8.36,
+      "reason": "Target Hit",
+      "phase": "train"
+    },
+    {
+      "symbol": "SBIN.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-05-14",
+      "exit_date": "2024-06-03",
+      "entry": 783.85,
+      "exit": 843.43,
+      "shares": 213,
+      "pnl": 12690.17,
+      "pnl_pct": 7.6,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "MARUTI.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-04-19",
+      "exit_date": "2024-06-04",
+      "entry": 12152.34,
+      "exit": 11686.88,
+      "shares": 16,
+      "pnl": -7447.43,
+      "pnl_pct": -3.83,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "MARUTI.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-06-10",
+      "exit_date": "2024-06-19",
+      "entry": 12510.3,
+      "exit": 11996.57,
+      "shares": 13,
+      "pnl": -6678.52,
+      "pnl_pct": -4.11,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "HDFCBANK.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-06-11",
+      "exit_date": "2024-07-05",
+      "entry": 767.62,
+      "exit": 813.06,
+      "shares": 140,
+      "pnl": 6361.02,
+      "pnl_pct": 5.92,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "AXISBANK.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-06-10",
+      "exit_date": "2024-07-23",
+      "entry": 1183.08,
+      "exit": 1250.37,
+      "shares": 167,
+      "pnl": 11238.26,
+      "pnl_pct": 5.69,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "BAJFINANCE.NS",
+      "setup": "Breakout",
+      "entry_date": "2024-06-10",
+      "exit_date": "2024-07-23",
+      "entry": 716.95,
+      "exit": 668.58,
+      "shares": 142,
+      "pnl": -6868.55,
+      "pnl_pct": -6.75,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "ITC.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-06-11",
+      "exit_date": "2024-07-23",
+      "entry": 398.41,
+      "exit": 426.3,
+      "shares": 225,
+      "pnl": 6275.05,
+      "pnl_pct": 7.0,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "SBIN.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-06-13",
+      "exit_date": "2024-07-24",
+      "entry": 828.37,
+      "exit": 832.16,
+      "shares": 78,
+      "pnl": 295.87,
+      "pnl_pct": 0.46,
+      "reason": "Stop Loss",
+      "phase": "train"
+    },
+    {
+      "symbol": "HCLTECH.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-08-07",
+      "exit_date": "2024-08-26",
+      "entry": 1496.44,
+      "exit": 1583.84,
+      "shares": 129,
+      "pnl": 11274.13,
+      "pnl_pct": 5.84,
+      "reason": "Target Hit",
+      "phase": "train"
+    },
+    {
+      "symbol": "BHARTIARTL.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-07-01",
+      "exit_date": "2024-09-12",
+      "entry": 1430.01,
+      "exit": 1578.66,
+      "shares": 57,
+      "pnl": 8473.08,
+      "pnl_pct": 10.4,
+      "reason": "Target Hit",
+      "phase": "train"
+    },
+    {
+      "symbol": "WIPRO.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-09-19",
+      "exit_date": "2024-11-18",
+      "entry": 255.07,
+      "exit": 255.36,
+      "shares": 752,
+      "pnl": 220.56,
+      "pnl_pct": 0.11,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "ICICIBANK.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-11-01",
+      "exit_date": "2024-11-21",
+      "entry": 1280.07,
+      "exit": 1223.62,
+      "shares": 136,
+      "pnl": -7677.58,
+      "pnl_pct": -4.41,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "LT.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-11-29",
+      "exit_date": "2024-12-18",
+      "entry": 3601.51,
+      "exit": 3715.29,
+      "shares": 40,
+      "pnl": 4551.15,
+      "pnl_pct": 3.16,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "WIPRO.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-11-29",
+      "exit_date": "2024-12-18",
+      "entry": 269.5,
+      "exit": 292.0,
+      "shares": 440,
+      "pnl": 9898.82,
+      "pnl_pct": 8.35,
+      "reason": "Target Hit",
+      "phase": "test"
+    },
+    {
+      "symbol": "BAJFINANCE.NS",
+      "setup": "Weinstein Pullback",
+      "entry_date": "2024-12-19",
+      "exit_date": "2024-12-20",
+      "entry": 690.74,
+      "exit": 679.96,
+      "shares": 217,
+      "pnl": -2338.78,
+      "pnl_pct": -1.56,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "SBIN.NS",
+      "setup": "Weinstein Pullback",
+      "entry_date": "2024-11-27",
+      "exit_date": "2024-12-27",
+      "entry": 821.99,
+      "exit": 783.91,
+      "shares": 224,
+      "pnl": -8531.09,
+      "pnl_pct": -4.63,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "HCLTECH.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-11-11",
+      "exit_date": "2024-12-30",
+      "entry": 1733.08,
+      "exit": 1755.28,
+      "shares": 80,
+      "pnl": 1776.29,
+      "pnl_pct": 1.28,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "WIPRO.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2024-12-26",
+      "exit_date": "2025-01-06",
+      "entry": 286.28,
+      "exit": 274.48,
+      "shares": 523,
+      "pnl": -6172.52,
+      "pnl_pct": -4.12,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "ITC.NS",
+      "setup": "Weinstein Pullback",
+      "entry_date": "2024-12-30",
+      "exit_date": "2025-01-06",
+      "entry": 438.3,
+      "exit": 419.1,
+      "shares": 353,
+      "pnl": -6775.21,
+      "pnl_pct": -4.38,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "TITAN.NS",
+      "setup": "Weinstein Pullback",
+      "entry_date": "2025-01-09",
+      "exit_date": "2025-01-13",
+      "entry": 3475.49,
+      "exit": 3349.08,
+      "shares": 51,
+      "pnl": -6446.94,
+      "pnl_pct": -3.64,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "HCLTECH.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2025-01-06",
+      "exit_date": "2025-01-14",
+      "entry": 1831.19,
+      "exit": 1701.97,
+      "shares": 83,
+      "pnl": -10725.9,
+      "pnl_pct": -7.06,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "KOTAKBANK.NS",
+      "setup": "Weinstein Pullback",
+      "entry_date": "2025-01-17",
+      "exit_date": "2025-01-17",
+      "entry": 358.99,
+      "exit": 350.7,
+      "shares": 503,
+      "pnl": -4167.9,
+      "pnl_pct": -2.31,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "BAJFINANCE.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2025-01-10",
+      "exit_date": "2025-02-03",
+      "entry": 723.28,
+      "exit": 795.54,
+      "shares": 183,
+      "pnl": 13223.22,
+      "pnl_pct": 9.99,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "BAJFINANCE.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2025-04-29",
+      "exit_date": "2025-04-30",
+      "entry": 907.4,
+      "exit": 858.15,
+      "shares": 187,
+      "pnl": -9209.02,
+      "pnl_pct": -5.43,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "KOTAKBANK.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2025-04-28",
+      "exit_date": "2025-05-05",
+      "entry": 438.89,
+      "exit": 415.33,
+      "shares": 443,
+      "pnl": -10438.84,
+      "pnl_pct": -5.37,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "BAJFINANCE.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2025-06-12",
+      "exit_date": "2025-06-20",
+      "entry": 944.9,
+      "exit": 891.04,
+      "shares": 152,
+      "pnl": -8186.72,
+      "pnl_pct": -5.7,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "AXISBANK.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2025-05-07",
+      "exit_date": "2025-07-01",
+      "entry": 1158.01,
+      "exit": 1170.82,
+      "shares": 176,
+      "pnl": 2254.49,
+      "pnl_pct": 1.11,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "LT.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2025-06-18",
+      "exit_date": "2025-07-14",
+      "entry": 3622.0,
+      "exit": 3490.74,
+      "shares": 37,
+      "pnl": -4856.62,
+      "pnl_pct": -3.62,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "HINDUNILVR.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2025-08-06",
+      "exit_date": "2025-09-19",
+      "entry": 2518.9,
+      "exit": 2538.02,
+      "shares": 69,
+      "pnl": 1319.35,
+      "pnl_pct": 0.76,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "NESTLEIND.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2025-09-09",
+      "exit_date": "2025-12-08",
+      "entry": 1188.78,
+      "exit": 1208.28,
+      "shares": 141,
+      "pnl": 2748.76,
+      "pnl_pct": 1.64,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "KOTAKBANK.NS",
+      "setup": "Weinstein Pullback",
+      "entry_date": "2025-10-08",
+      "exit_date": "2026-01-27",
+      "entry": 425.3,
+      "exit": 406.48,
+      "shares": 398,
+      "pnl": -7490.36,
+      "pnl_pct": -4.43,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "HCLTECH.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2026-02-04",
+      "exit_date": "2026-02-06",
+      "entry": 1611.15,
+      "exit": 1548.42,
+      "shares": 105,
+      "pnl": -6587.13,
+      "pnl_pct": -3.89,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "ULTRACEMCO.NS",
+      "setup": "Weinstein Pullback",
+      "entry_date": "2026-01-22",
+      "exit_date": "2026-02-09",
+      "entry": 12293.0,
+      "exit": 13030.8,
+      "shares": 13,
+      "pnl": 9591.4,
+      "pnl_pct": 6.0,
+      "reason": "Target Hit",
+      "phase": "test"
+    },
+    {
+      "symbol": "HINDUNILVR.NS",
+      "setup": "Weinstein Pullback",
+      "entry_date": "2026-02-12",
+      "exit_date": "2026-02-12",
+      "entry": 2475.0,
+      "exit": 2406.02,
+      "shares": 49,
+      "pnl": -3380.02,
+      "pnl_pct": -2.79,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "KOTAKBANK.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2026-02-11",
+      "exit_date": "2026-03-02",
+      "entry": 431.7,
+      "exit": 407.77,
+      "shares": 310,
+      "pnl": -7418.3,
+      "pnl_pct": -5.54,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "SBIN.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2026-02-09",
+      "exit_date": "2026-03-04",
+      "entry": 1120.0,
+      "exit": 1166.41,
+      "shares": 127,
+      "pnl": 5894.07,
+      "pnl_pct": 4.14,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "AXISBANK.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2026-02-05",
+      "exit_date": "2026-03-09",
+      "entry": 1340.0,
+      "exit": 1269.18,
+      "shares": 96,
+      "pnl": -6798.72,
+      "pnl_pct": -5.29,
+      "reason": "Stop Loss",
+      "phase": "test"
+    },
+    {
+      "symbol": "TITAN.NS",
+      "setup": "EMA Pullback",
+      "entry_date": "2026-02-16",
+      "exit_date": "2026-03-16",
+      "entry": 4155.0,
+      "exit": 4008.99,
+      "shares": 29,
+      "pnl": -4234.29,
+      "pnl_pct": -3.51,
+      "reason": "Stop Loss",
+      "phase": "test"
+    }
+  ],
+  "equity_curve": [
+    {
+      "date": "2021-02-04 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-02-05 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-02-08 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-02-09 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-02-10 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-02-11 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-02-12 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-02-15 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-02-16 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-02-17 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-02-18 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-02-19 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-02-22 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-02-23 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-02-24 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-02-25 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-02-26 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-01 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-02 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-03 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-04 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-05 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-08 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-09 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-10 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-12 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-15 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-16 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-17 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-18 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-19 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-22 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-23 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-24 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-25 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-26 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-30 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-03-31 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-01 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-05 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-06 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-07 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-08 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-09 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-12 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-13 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-15 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-16 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-19 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-20 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-22 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-23 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-26 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-27 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-28 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-29 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-04-30 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-03 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-04 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-05 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-06 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-07 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-10 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-11 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-12 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-14 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-17 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-18 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-19 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-20 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-21 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-24 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-25 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-26 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-27 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-28 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-05-31 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-01 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-02 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-03 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-04 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-07 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-08 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-09 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-10 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-11 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-14 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-15 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-16 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-17 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-18 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-21 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-22 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-23 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-24 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-25 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-28 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-29 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-06-30 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-01 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-02 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-05 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-06 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-07 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-08 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-09 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-12 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-13 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-14 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-15 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-16 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-19 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-20 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-22 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-23 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-26 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-27 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-28 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-29 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-07-30 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-02 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-03 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-04 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-05 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-06 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-09 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-10 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-11 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-12 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-13 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-16 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-17 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-18 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-20 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-23 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-24 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-25 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-26 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-27 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-30 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-08-31 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-01 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-02 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-03 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-06 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-07 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-08 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-09 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-13 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-14 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-15 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-16 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-17 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-20 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-21 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-22 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-23 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-24 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-27 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-28 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-29 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-09-30 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-01 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-04 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-05 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-06 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-07 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-08 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-11 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-12 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-13 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-14 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-18 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-19 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-20 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-21 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-22 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-25 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-26 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-27 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-28 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-10-29 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-01 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-02 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-03 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-04 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-08 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-09 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-10 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-11 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-12 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-15 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-16 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-17 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-18 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-22 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-23 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-24 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-25 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-26 00:00:00",
+      "equity": 1000000.0
+    },
+    {
+      "date": "2021-11-29 00:00:00",
+      "equity": 997242.9114837898
+    },
+    {
+      "date": "2021-11-30 00:00:00",
+      "equity": 994823.6663666023
+    },
+    {
+      "date": "2021-12-01 00:00:00",
+      "equity": 993515.9640960945
+    },
+    {
+      "date": "2021-12-02 00:00:00",
+      "equity": 995760.8543548835
+    },
+    {
+      "date": "2021-12-03 00:00:00",
+      "equity": 992665.9535370125
+    },
+    {
+      "date": "2021-12-06 00:00:00",
+      "equity": 988143.4661712898
+    },
+    {
+      "date": "2021-12-07 00:00:00",
+      "equity": 988143.4661712898
+    },
+    {
+      "date": "2021-12-08 00:00:00",
+      "equity": 988143.4661712898
+    },
+    {
+      "date": "2021-12-09 00:00:00",
+      "equity": 988143.4661712898
+    },
+    {
+      "date": "2021-12-10 00:00:00",
+      "equity": 988143.4661712898
+    },
+    {
+      "date": "2021-12-13 00:00:00",
+      "equity": 988143.4661712898
+    },
+    {
+      "date": "2021-12-14 00:00:00",
+      "equity": 983313.7127865679
+    },
+    {
+      "date": "2021-12-15 00:00:00",
+      "equity": 979880.0803097612
+    },
+    {
+      "date": "2021-12-16 00:00:00",
+      "equity": 979012.2405423052
+    },
+    {
+      "date": "2021-12-17 00:00:00",
+      "equity": 978265.1634567339
+    },
+    {
+      "date": "2021-12-20 00:00:00",
+      "equity": 978265.1634567339
+    },
+    {
+      "date": "2021-12-21 00:00:00",
+      "equity": 978265.1634567339
+    },
+    {
+      "date": "2021-12-22 00:00:00",
+      "equity": 978265.1634567339
+    },
+    {
+      "date": "2021-12-23 00:00:00",
+      "equity": 978265.1634567339
+    },
+    {
+      "date": "2021-12-24 00:00:00",
+      "equity": 975335.8281397694
+    },
+    {
+      "date": "2021-12-27 00:00:00",
+      "equity": 976014.5068507069
+    },
+    {
+      "date": "2021-12-28 00:00:00",
+      "equity": 979338.1015772694
+    },
+    {
+      "date": "2021-12-29 00:00:00",
+      "equity": 978873.9863428944
+    },
+    {
+      "date": "2021-12-30 00:00:00",
+      "equity": 977960.7363428944
+    },
+    {
+      "date": "2021-12-31 00:00:00",
+      "equity": 978978.7861475819
+    },
+    {
+      "date": "2022-01-03 00:00:00",
+      "equity": 981668.5927882069
+    },
+    {
+      "date": "2022-01-04 00:00:00",
+      "equity": 983135.7646632069
+    },
+    {
+      "date": "2022-01-05 00:00:00",
+      "equity": 984238.6318507069
+    },
+    {
+      "date": "2022-01-06 00:00:00",
+      "equity": 981833.2636866444
+    },
+    {
+      "date": "2022-01-07 00:00:00",
+      "equity": 979877.0556788319
+    },
+    {
+      "date": "2022-01-10 00:00:00",
+      "equity": 984687.7539210194
+    },
+    {
+      "date": "2022-01-11 00:00:00",
+      "equity": 985491.2021632069
+    },
+    {
+      "date": "2022-01-12 00:00:00",
+      "equity": 987515.1576655867
+    },
+    {
+      "date": "2022-01-13 00:00:00",
+      "equity": 993559.4760249617
+    },
+    {
+      "date": "2022-01-14 00:00:00",
+      "equity": 998936.110546446
+    },
+    {
+      "date": "2022-01-17 00:00:00",
+      "equity": 1002252.8344233992
+    },
+    {
+      "date": "2022-01-18 00:00:00",
+      "equity": 999917.7922651961
+    },
+    {
+      "date": "2022-01-19 00:00:00",
+      "equity": 997142.5231930764
+    },
+    {
+      "date": "2022-01-20 00:00:00",
+      "equity": 993902.7180172951
+    },
+    {
+      "date": "2022-01-21 00:00:00",
+      "equity": 993800.2805172951
+    },
+    {
+      "date": "2022-01-24 00:00:00",
+      "equity": 990542.3156833107
+    },
+    {
+      "date": "2022-01-25 00:00:00",
+      "equity": 1001688.9270114357
+    },
+    {
+      "date": "2022-01-27 00:00:00",
+      "equity": 992976.3420114358
+    },
+    {
+      "date": "2022-01-28 00:00:00",
+      "equity": 992976.3420114358
+    },
+    {
+      "date": "2022-01-31 00:00:00",
+      "equity": 992976.3420114358
+    },
+    {
+      "date": "2022-02-01 00:00:00",
+      "equity": 990827.1740388501
+    },
+    {
+      "date": "2022-02-02 00:00:00",
+      "equity": 991259.1788606275
+    },
+    {
+      "date": "2022-02-03 00:00:00",
+      "equity": 986529.6839185493
+    },
+    {
+      "date": "2022-02-04 00:00:00",
+      "equity": 987410.4229932564
+    },
+    {
+      "date": "2022-02-07 00:00:00",
+      "equity": 979153.6690259712
+    },
+    {
+      "date": "2022-02-08 00:00:00",
+      "equity": 979672.0694165962
+    },
+    {
+      "date": "2022-02-09 00:00:00",
+      "equity": 981929.2261548775
+    },
+    {
+      "date": "2022-02-10 00:00:00",
+      "equity": 982944.4044385689
+    },
+    {
+      "date": "2022-02-11 00:00:00",
+      "equity": 981022.0389600532
+    },
+    {
+      "date": "2022-02-14 00:00:00",
+      "equity": 971168.2255190393
+    },
+    {
+      "date": "2022-02-15 00:00:00",
+      "equity": 978106.2495571253
+    },
+    {
+      "date": "2022-02-16 00:00:00",
+      "equity": 973396.3988370987
+    },
+    {
+      "date": "2022-02-17 00:00:00",
+      "equity": 971724.4147062394
+    },
+    {
+      "date": "2022-02-18 00:00:00",
+      "equity": 972734.1617765519
+    },
+    {
+      "date": "2022-02-21 00:00:00",
+      "equity": 973214.9403288973
+    },
+    {
+      "date": "2022-02-22 00:00:00",
+      "equity": 967391.0478118075
+    },
+    {
+      "date": "2022-02-23 00:00:00",
+      "equity": 968324.860494913
+    },
+    {
+      "date": "2022-02-24 00:00:00",
+      "equity": 944357.9084075106
+    },
+    {
+      "date": "2022-02-25 00:00:00",
+      "equity": 944172.9743450106
+    },
+    {
+      "date": "2022-02-28 00:00:00",
+      "equity": 944172.9743450106
+    },
+    {
+      "date": "2022-03-02 00:00:00",
+      "equity": 944172.9743450106
+    },
+    {
+      "date": "2022-03-03 00:00:00",
+      "equity": 944172.9743450106
+    },
+    {
+      "date": "2022-03-04 00:00:00",
+      "equity": 944172.9743450106
+    },
+    {
+      "date": "2022-03-07 00:00:00",
+      "equity": 944172.9743450106
+    },
+    {
+      "date": "2022-03-08 00:00:00",
+      "equity": 944172.9743450106
+    },
+    {
+      "date": "2022-03-09 00:00:00",
+      "equity": 944172.9743450106
+    },
+    {
+      "date": "2022-03-10 00:00:00",
+      "equity": 944172.9743450106
+    },
+    {
+      "date": "2022-03-11 00:00:00",
+      "equity": 944172.9743450106
+    },
+    {
+      "date": "2022-03-14 00:00:00",
+      "equity": 945656.2630933665
+    },
+    {
+      "date": "2022-03-15 00:00:00",
+      "equity": 938002.4947246655
+    },
+    {
+      "date": "2022-03-16 00:00:00",
+      "equity": 943773.2958721265
+    },
+    {
+      "date": "2022-03-17 00:00:00",
+      "equity": 947676.6637920483
+    },
+    {
+      "date": "2022-03-21 00:00:00",
+      "equity": 942336.9971050366
+    },
+    {
+      "date": "2022-03-22 00:00:00",
+      "equity": 947164.4057354077
+    },
+    {
+      "date": "2022-03-23 00:00:00",
+      "equity": 948286.1477398023
+    },
+    {
+      "date": "2022-03-24 00:00:00",
+      "equity": 952256.9634746655
+    },
+    {
+      "date": "2022-03-25 00:00:00",
+      "equity": 946646.3861085366
+    },
+    {
+      "date": "2022-03-28 00:00:00",
+      "equity": 946162.6613160562
+    },
+    {
+      "date": "2022-03-29 00:00:00",
+      "equity": 943214.9470313882
+    },
+    {
+      "date": "2022-03-30 00:00:00",
+      "equity": 945989.8232520913
+    },
+    {
+      "date": "2022-03-31 00:00:00",
+      "equity": 943886.6506446694
+    },
+    {
+      "date": "2022-04-01 00:00:00",
+      "equity": 945048.3363136147
+    },
+    {
+      "date": "2022-04-04 00:00:00",
+      "equity": 945480.5361427163
+    },
+    {
+      "date": "2022-04-05 00:00:00",
+      "equity": 943407.6578468179
+    },
+    {
+      "date": "2022-04-06 00:00:00",
+      "equity": 942956.133186774
+    },
+    {
+      "date": "2022-04-07 00:00:00",
+      "equity": 939182.0205769107
+    },
+    {
+      "date": "2022-04-08 00:00:00",
+      "equity": 943195.0150227115
+    },
+    {
+      "date": "2022-04-11 00:00:00",
+      "equity": 942245.5366291568
+    },
+    {
+      "date": "2022-04-12 00:00:00",
+      "equity": 938191.9102253482
+    },
+    {
+      "date": "2022-04-13 00:00:00",
+      "equity": 938844.1664509341
+    },
+    {
+      "date": "2022-04-18 00:00:00",
+      "equity": 936961.9599690005
+    },
+    {
+      "date": "2022-04-19 00:00:00",
+      "equity": 936670.0047834537
+    },
+    {
+      "date": "2022-04-20 00:00:00",
+      "equity": 931746.7927473208
+    },
+    {
+      "date": "2022-04-21 00:00:00",
+      "equity": 932248.8899877908
+    },
+    {
+      "date": "2022-04-22 00:00:00",
+      "equity": 932750.9997900369
+    },
+    {
+      "date": "2022-04-25 00:00:00",
+      "equity": 928554.8851660135
+    },
+    {
+      "date": "2022-04-26 00:00:00",
+      "equity": 934106.3884572556
+    },
+    {
+      "date": "2022-04-27 00:00:00",
+      "equity": 933185.4599294235
+    },
+    {
+      "date": "2022-04-28 00:00:00",
+      "equity": 937599.36382957
+    },
+    {
+      "date": "2022-04-29 00:00:00",
+      "equity": 935181.1349172165
+    },
+    {
+      "date": "2022-05-02 00:00:00",
+      "equity": 937330.7606191208
+    },
+    {
+      "date": "2022-05-04 00:00:00",
+      "equity": 931061.0025624802
+    },
+    {
+      "date": "2022-05-05 00:00:00",
+      "equity": 930382.5935353806
+    },
+    {
+      "date": "2022-05-06 00:00:00",
+      "equity": 932788.3208913376
+    },
+    {
+      "date": "2022-05-09 00:00:00",
+      "equity": 925617.040190654
+    },
+    {
+      "date": "2022-05-10 00:00:00",
+      "equity": 923321.7358388474
+    },
+    {
+      "date": "2022-05-11 00:00:00",
+      "equity": 920380.8957204391
+    },
+    {
+      "date": "2022-05-12 00:00:00",
+      "equity": 918408.3724660446
+    },
+    {
+      "date": "2022-05-13 00:00:00",
+      "equity": 922496.8977956345
+    },
+    {
+      "date": "2022-05-16 00:00:00",
+      "equity": 919269.0868215134
+    },
+    {
+      "date": "2022-05-17 00:00:00",
+      "equity": 926872.2882680466
+    },
+    {
+      "date": "2022-05-18 00:00:00",
+      "equity": 928378.5780324509
+    },
+    {
+      "date": "2022-05-19 00:00:00",
+      "equity": 934726.5049733688
+    },
+    {
+      "date": "2022-05-20 00:00:00",
+      "equity": 937846.673796611
+    },
+    {
+      "date": "2022-05-23 00:00:00",
+      "equity": 933901.6140737106
+    },
+    {
+      "date": "2022-05-24 00:00:00",
+      "equity": 931283.5682668259
+    },
+    {
+      "date": "2022-05-25 00:00:00",
+      "equity": 932610.5293263962
+    },
+    {
+      "date": "2022-05-26 00:00:00",
+      "equity": 932971.0895680954
+    },
+    {
+      "date": "2022-05-27 00:00:00",
+      "equity": 934807.9963979294
+    },
+    {
+      "date": "2022-05-30 00:00:00",
+      "equity": 934697.8039235641
+    },
+    {
+      "date": "2022-05-31 00:00:00",
+      "equity": 935873.4237660934
+    },
+    {
+      "date": "2022-06-01 00:00:00",
+      "equity": 936755.1353444626
+    },
+    {
+      "date": "2022-06-02 00:00:00",
+      "equity": 937967.5168447067
+    },
+    {
+      "date": "2022-06-03 00:00:00",
+      "equity": 937379.6871022751
+    },
+    {
+      "date": "2022-06-06 00:00:00",
+      "equity": 938922.7120961716
+    },
+    {
+      "date": "2022-06-07 00:00:00",
+      "equity": 938261.4251088669
+    },
+    {
+      "date": "2022-06-08 00:00:00",
+      "equity": 933852.8011464645
+    },
+    {
+      "date": "2022-06-09 00:00:00",
+      "equity": 936020.3646840622
+    },
+    {
+      "date": "2022-06-10 00:00:00",
+      "equity": 935506.0318288376
+    },
+    {
+      "date": "2022-06-13 00:00:00",
+      "equity": 931464.8130178024
+    },
+    {
+      "date": "2022-06-14 00:00:00",
+      "equity": 932052.6295461227
+    },
+    {
+      "date": "2022-06-15 00:00:00",
+      "equity": 930546.3529958298
+    },
+    {
+      "date": "2022-06-16 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-06-17 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-06-20 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-06-21 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-06-22 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-06-23 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-06-24 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-06-27 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-06-28 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-06-29 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-06-30 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-01 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-04 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-05 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-06 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-07 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-08 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-11 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-12 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-13 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-14 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-15 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-18 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-19 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-20 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-21 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-22 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-25 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-26 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-27 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-28 00:00:00",
+      "equity": 928562.465605693
+    },
+    {
+      "date": "2022-07-29 00:00:00",
+      "equity": 926253.6259503827
+    },
+    {
+      "date": "2022-08-01 00:00:00",
+      "equity": 927780.2270856366
+    },
+    {
+      "date": "2022-08-02 00:00:00",
+      "equity": 927691.9148908124
+    },
+    {
+      "date": "2022-08-03 00:00:00",
+      "equity": 927704.5309186444
+    },
+    {
+      "date": "2022-08-04 00:00:00",
+      "equity": 925458.7853131756
+    },
+    {
+      "date": "2022-08-05 00:00:00",
+      "equity": 927199.8589215741
+    },
+    {
+      "date": "2022-08-08 00:00:00",
+      "equity": 931502.1251569256
+    },
+    {
+      "date": "2022-08-10 00:00:00",
+      "equity": 929849.3483014569
+    },
+    {
+      "date": "2022-08-11 00:00:00",
+      "equity": 934821.2587775263
+    },
+    {
+      "date": "2022-08-12 00:00:00",
+      "equity": 936799.453967956
+    },
+    {
+      "date": "2022-08-16 00:00:00",
+      "equity": 938345.1865729365
+    },
+    {
+      "date": "2022-08-17 00:00:00",
+      "equity": 940646.5796393427
+    },
+    {
+      "date": "2022-08-18 00:00:00",
+      "equity": 939062.630115417
+    },
+    {
+      "date": "2022-08-19 00:00:00",
+      "equity": 935608.2802008662
+    },
+    {
+      "date": "2022-08-22 00:00:00",
+      "equity": 929746.4398688349
+    },
+    {
+      "date": "2022-08-23 00:00:00",
+      "equity": 934545.8070702777
+    },
+    {
+      "date": "2022-08-24 00:00:00",
+      "equity": 933285.6849261697
+    },
+    {
+      "date": "2022-08-25 00:00:00",
+      "equity": 930115.3361712869
+    },
+    {
+      "date": "2022-08-26 00:00:00",
+      "equity": 928140.3355994246
+    },
+    {
+      "date": "2022-08-29 00:00:00",
+      "equity": 923124.0754675886
+    },
+    {
+      "date": "2022-08-30 00:00:00",
+      "equity": 931888.4633093855
+    },
+    {
+      "date": "2022-09-01 00:00:00",
+      "equity": 927108.5544348737
+    },
+    {
+      "date": "2022-09-02 00:00:00",
+      "equity": 927986.8542395612
+    },
+    {
+      "date": "2022-09-05 00:00:00",
+      "equity": 930679.9145320891
+    },
+    {
+      "date": "2022-09-06 00:00:00",
+      "equity": 927021.552702497
+    },
+    {
+      "date": "2022-09-07 00:00:00",
+      "equity": 926750.8204026923
+    },
+    {
+      "date": "2022-09-08 00:00:00",
+      "equity": 935925.6986985907
+    },
+    {
+      "date": "2022-09-09 00:00:00",
+      "equity": 937279.4588304267
+    },
+    {
+      "date": "2022-09-12 00:00:00",
+      "equity": 941813.4278245673
+    },
+    {
+      "date": "2022-09-13 00:00:00",
+      "equity": 943626.4079783759
+    },
+    {
+      "date": "2022-09-14 00:00:00",
+      "equity": 946921.1881907783
+    },
+    {
+      "date": "2022-09-15 00:00:00",
+      "equity": 946959.8230174384
+    },
+    {
+      "date": "2022-09-16 00:00:00",
+      "equity": 941768.5061229072
+    },
+    {
+      "date": "2022-09-19 00:00:00",
+      "equity": 945793.3106883368
+    },
+    {
+      "date": "2022-09-20 00:00:00",
+      "equity": 949151.9264256416
+    },
+    {
+      "date": "2022-09-21 00:00:00",
+      "equity": 949342.899203962
+    },
+    {
+      "date": "2022-09-22 00:00:00",
+      "equity": 950569.3111302315
+    },
+    {
+      "date": "2022-09-23 00:00:00",
+      "equity": 943692.0002781807
+    },
+    {
+      "date": "2022-09-26 00:00:00",
+      "equity": 930479.3133274971
+    },
+    {
+      "date": "2022-09-27 00:00:00",
+      "equity": 930396.0776756855
+    },
+    {
+      "date": "2022-09-28 00:00:00",
+      "equity": 924902.6413353535
+    },
+    {
+      "date": "2022-09-29 00:00:00",
+      "equity": 929397.2746971699
+    },
+    {
+      "date": "2022-09-30 00:00:00",
+      "equity": 928925.5756004902
+    },
+    {
+      "date": "2022-10-03 00:00:00",
+      "equity": 924597.4360130879
+    },
+    {
+      "date": "2022-10-04 00:00:00",
+      "equity": 929286.3054588886
+    },
+    {
+      "date": "2022-10-06 00:00:00",
+      "equity": 931394.8806542011
+    },
+    {
+      "date": "2022-10-07 00:00:00",
+      "equity": 930178.595594248
+    },
+    {
+      "date": "2022-10-10 00:00:00",
+      "equity": 926575.0543344824
+    },
+    {
+      "date": "2022-10-11 00:00:00",
+      "equity": 923538.3408335058
+    },
+    {
+      "date": "2022-10-12 00:00:00",
+      "equity": 924788.9082163183
+    },
+    {
+      "date": "2022-10-13 00:00:00",
+      "equity": 922783.1303842871
+    },
+    {
+      "date": "2022-10-14 00:00:00",
+      "equity": 924164.5949838965
+    },
+    {
+      "date": "2022-10-17 00:00:00",
+      "equity": 924256.8711679785
+    },
+    {
+      "date": "2022-10-18 00:00:00",
+      "equity": 931821.6907480566
+    },
+    {
+      "date": "2022-10-19 00:00:00",
+      "equity": 935223.9473398535
+    },
+    {
+      "date": "2022-10-20 00:00:00",
+      "equity": 938798.868604502
+    },
+    {
+      "date": "2022-10-21 00:00:00",
+      "equity": 937345.6677988379
+    },
+    {
+      "date": "2022-10-24 00:00:00",
+      "equity": 939350.9025400488
+    },
+    {
+      "date": "2022-10-25 00:00:00",
+      "equity": 938610.1664560644
+    },
+    {
+      "date": "2022-10-27 00:00:00",
+      "equity": 941006.1027963965
+    },
+    {
+      "date": "2022-10-28 00:00:00",
+      "equity": 940960.9450815527
+    },
+    {
+      "date": "2022-10-31 00:00:00",
+      "equity": 945306.7144907324
+    },
+    {
+      "date": "2022-11-01 00:00:00",
+      "equity": 946391.9110849707
+    },
+    {
+      "date": "2022-11-02 00:00:00",
+      "equity": 944607.3145273535
+    },
+    {
+      "date": "2022-11-03 00:00:00",
+      "equity": 946037.0312035172
+    },
+    {
+      "date": "2022-11-04 00:00:00",
+      "equity": 945453.931899318
+    },
+    {
+      "date": "2022-11-07 00:00:00",
+      "equity": 947846.581496486
+    },
+    {
+      "date": "2022-11-09 00:00:00",
+      "equity": 949721.7266045857
+    },
+    {
+      "date": "2022-11-10 00:00:00",
+      "equity": 948104.459592867
+    },
+    {
+      "date": "2022-11-11 00:00:00",
+      "equity": 947819.3868389607
+    },
+    {
+      "date": "2022-11-14 00:00:00",
+      "equity": 947005.8570538044
+    },
+    {
+      "date": "2022-11-15 00:00:00",
+      "equity": 950232.4278545857
+    },
+    {
+      "date": "2022-11-16 00:00:00",
+      "equity": 950871.7144756794
+    },
+    {
+      "date": "2022-11-17 00:00:00",
+      "equity": 949833.283811617
+    },
+    {
+      "date": "2022-11-18 00:00:00",
+      "equity": 946791.590452242
+    },
+    {
+      "date": "2022-11-21 00:00:00",
+      "equity": 949136.0303936482
+    },
+    {
+      "date": "2022-11-22 00:00:00",
+      "equity": 948676.8819561482
+    },
+    {
+      "date": "2022-11-23 00:00:00",
+      "equity": 949369.5211163044
+    },
+    {
+      "date": "2022-11-24 00:00:00",
+      "equity": 950843.6729717732
+    },
+    {
+      "date": "2022-11-25 00:00:00",
+      "equity": 951071.797483492
+    },
+    {
+      "date": "2022-11-28 00:00:00",
+      "equity": 949034.3087139607
+    },
+    {
+      "date": "2022-11-29 00:00:00",
+      "equity": 947801.012327242
+    },
+    {
+      "date": "2022-11-30 00:00:00",
+      "equity": 950430.658811617
+    },
+    {
+      "date": "2022-12-01 00:00:00",
+      "equity": 950671.842405367
+    },
+    {
+      "date": "2022-12-02 00:00:00",
+      "equity": 948839.0411358357
+    },
+    {
+      "date": "2022-12-05 00:00:00",
+      "equity": 948528.2242413044
+    },
+    {
+      "date": "2022-12-06 00:00:00",
+      "equity": 944948.6090069294
+    },
+    {
+      "date": "2022-12-07 00:00:00",
+      "equity": 944907.8824444294
+    },
+    {
+      "date": "2022-12-08 00:00:00",
+      "equity": 945037.846311617
+    },
+    {
+      "date": "2022-12-09 00:00:00",
+      "equity": 945856.971311617
+    },
+    {
+      "date": "2022-12-12 00:00:00",
+      "equity": 944395.709592867
+    },
+    {
+      "date": "2022-12-13 00:00:00",
+      "equity": 946446.7593975544
+    },
+    {
+      "date": "2022-12-14 00:00:00",
+      "equity": 945576.3980694294
+    },
+    {
+      "date": "2022-12-15 00:00:00",
+      "equity": 944266.7510967732
+    },
+    {
+      "date": "2022-12-16 00:00:00",
+      "equity": 942567.8106670857
+    },
+    {
+      "date": "2022-12-19 00:00:00",
+      "equity": 945847.5562725544
+    },
+    {
+      "date": "2022-12-20 00:00:00",
+      "equity": 943779.285764742
+    },
+    {
+      "date": "2022-12-21 00:00:00",
+      "equity": 940159.1641827107
+    },
+    {
+      "date": "2022-12-22 00:00:00",
+      "equity": 940628.7999248982
+    },
+    {
+      "date": "2022-12-23 00:00:00",
+      "equity": 937578.1558819294
+    },
+    {
+      "date": "2022-12-26 00:00:00",
+      "equity": 939499.800999117
+    },
+    {
+      "date": "2022-12-27 00:00:00",
+      "equity": 939899.2922100545
+    },
+    {
+      "date": "2022-12-28 00:00:00",
+      "equity": 939828.5495342732
+    },
+    {
+      "date": "2022-12-29 00:00:00",
+      "equity": 940723.2448467732
+    },
+    {
+      "date": "2022-12-30 00:00:00",
+      "equity": 940881.3805889607
+    },
+    {
+      "date": "2023-01-02 00:00:00",
+      "equity": 940756.5402569295
+    },
+    {
+      "date": "2023-01-03 00:00:00",
+      "equity": 940773.179905367
+    },
+    {
+      "date": "2023-01-04 00:00:00",
+      "equity": 940173.9484600545
+    },
+    {
+      "date": "2023-01-05 00:00:00",
+      "equity": 940165.6178936482
+    },
+    {
+      "date": "2023-01-06 00:00:00",
+      "equity": 939795.2594952107
+    },
+    {
+      "date": "2023-01-09 00:00:00",
+      "equity": 940382.013889742
+    },
+    {
+      "date": "2023-01-10 00:00:00",
+      "equity": 939337.5134014607
+    },
+    {
+      "date": "2023-01-11 00:00:00",
+      "equity": 939466.5109600545
+    },
+    {
+      "date": "2023-01-12 00:00:00",
+      "equity": 939316.7004131795
+    },
+    {
+      "date": "2023-01-13 00:00:00",
+      "equity": 939749.4816631795
+    },
+    {
+      "date": "2023-01-16 00:00:00",
+      "equity": 939990.8425030232
+    },
+    {
+      "date": "2023-01-17 00:00:00",
+      "equity": 939154.4074444295
+    },
+    {
+      "date": "2023-01-18 00:00:00",
+      "equity": 939029.5617413045
+    },
+    {
+      "date": "2023-01-19 00:00:00",
+      "equity": 940353.149207576
+    },
+    {
+      "date": "2023-01-20 00:00:00",
+      "equity": 939969.256629451
+    },
+    {
+      "date": "2023-01-23 00:00:00",
+      "equity": 942812.8215708572
+    },
+    {
+      "date": "2023-01-24 00:00:00",
+      "equity": 944985.2248911697
+    },
+    {
+      "date": "2023-01-25 00:00:00",
+      "equity": 938732.6708322663
+    },
+    {
+      "date": "2023-01-27 00:00:00",
+      "equity": 934236.3737131257
+    },
+    {
+      "date": "2023-01-30 00:00:00",
+      "equity": 934307.0280100007
+    },
+    {
+      "date": "2023-01-31 00:00:00",
+      "equity": 931779.2332443757
+    },
+    {
+      "date": "2023-02-01 00:00:00",
+      "equity": 933372.8142990632
+    },
+    {
+      "date": "2023-02-02 00:00:00",
+      "equity": 937586.6889576953
+    },
+    {
+      "date": "2023-02-03 00:00:00",
+      "equity": 937476.3730397265
+    },
+    {
+      "date": "2023-02-06 00:00:00",
+      "equity": 936124.6274342578
+    },
+    {
+      "date": "2023-02-07 00:00:00",
+      "equity": 931792.8917034384
+    },
+    {
+      "date": "2023-02-08 00:00:00",
+      "equity": 938161.6437175985
+    },
+    {
+      "date": "2023-02-09 00:00:00",
+      "equity": 936670.3999431845
+    },
+    {
+      "date": "2023-02-10 00:00:00",
+      "equity": 932747.7360637899
+    },
+    {
+      "date": "2023-02-13 00:00:00",
+      "equity": 931858.5628460165
+    },
+    {
+      "date": "2023-02-14 00:00:00",
+      "equity": 934150.8317058798
+    },
+    {
+      "date": "2023-02-15 00:00:00",
+      "equity": 935364.2361858602
+    },
+    {
+      "date": "2023-02-16 00:00:00",
+      "equity": 934570.9866741415
+    },
+    {
+      "date": "2023-02-17 00:00:00",
+      "equity": 933574.3598430868
+    },
+    {
+      "date": "2023-02-20 00:00:00",
+      "equity": 936098.3547161337
+    },
+    {
+      "date": "2023-02-21 00:00:00",
+      "equity": 933072.950175118
+    },
+    {
+      "date": "2023-02-22 00:00:00",
+      "equity": 925914.3118084188
+    },
+    {
+      "date": "2023-02-23 00:00:00",
+      "equity": 924805.688456368
+    },
+    {
+      "date": "2023-02-24 00:00:00",
+      "equity": 924668.0408123251
+    },
+    {
+      "date": "2023-02-27 00:00:00",
+      "equity": 922579.932169747
+    },
+    {
+      "date": "2023-02-28 00:00:00",
+      "equity": 922183.992091622
+    },
+    {
+      "date": "2023-03-01 00:00:00",
+      "equity": 926232.033107247
+    },
+    {
+      "date": "2023-03-02 00:00:00",
+      "equity": 927323.5160174032
+    },
+    {
+      "date": "2023-03-03 00:00:00",
+      "equity": 927911.5282244345
+    },
+    {
+      "date": "2023-03-06 00:00:00",
+      "equity": 928833.9774431845
+    },
+    {
+      "date": "2023-03-08 00:00:00",
+      "equity": 929236.4681658407
+    },
+    {
+      "date": "2023-03-09 00:00:00",
+      "equity": 928090.7748064657
+    },
+    {
+      "date": "2023-03-10 00:00:00",
+      "equity": 927692.6922869345
+    },
+    {
+      "date": "2023-03-13 00:00:00",
+      "equity": 921729.4847674032
+    },
+    {
+      "date": "2023-03-14 00:00:00",
+      "equity": 919146.8597674032
+    },
+    {
+      "date": "2023-03-15 00:00:00",
+      "equity": 919198.5609392782
+    },
+    {
+      "date": "2023-03-16 00:00:00",
+      "equity": 918111.0555681845
+    },
+    {
+      "date": "2023-03-17 00:00:00",
+      "equity": 927741.398341622
+    },
+    {
+      "date": "2023-03-20 00:00:00",
+      "equity": 923943.0062517782
+    },
+    {
+      "date": "2023-03-21 00:00:00",
+      "equity": 925086.5531267782
+    },
+    {
+      "date": "2023-03-22 00:00:00",
+      "equity": 925598.6981463095
+    },
+    {
+      "date": "2023-03-23 00:00:00",
+      "equity": 923329.0555681845
+    },
+    {
+      "date": "2023-03-24 00:00:00",
+      "equity": 921003.8856463095
+    },
+    {
+      "date": "2023-03-27 00:00:00",
+      "equity": 921234.0867595908
+    },
+    {
+      "date": "2023-03-28 00:00:00",
+      "equity": 920261.4627361533
+    },
+    {
+      "date": "2023-03-29 00:00:00",
+      "equity": 923723.4891033408
+    },
+    {
+      "date": "2023-03-31 00:00:00",
+      "equity": 924784.901700997
+    },
+    {
+      "date": "2023-04-03 00:00:00",
+      "equity": 925163.845060372
+    },
+    {
+      "date": "2023-04-05 00:00:00",
+      "equity": 926226.3035564658
+    },
+    {
+      "date": "2023-04-06 00:00:00",
+      "equity": 926430.7459392783
+    },
+    {
+      "date": "2023-04-10 00:00:00",
+      "equity": 926315.0921306845
+    },
+    {
+      "date": "2023-04-11 00:00:00",
+      "equity": 927248.4949627158
+    },
+    {
+      "date": "2023-04-12 00:00:00",
+      "equity": 926038.3904705283
+    },
+    {
+      "date": "2023-04-13 00:00:00",
+      "equity": 925468.4475994345
+    },
+    {
+      "date": "2023-04-17 00:00:00",
+      "equity": 927269.1565838095
+    },
+    {
+      "date": "2023-04-18 00:00:00",
+      "equity": 924230.4422283408
+    },
+    {
+      "date": "2023-04-19 00:00:00",
+      "equity": 922590.811857247
+    },
+    {
+      "date": "2023-04-20 00:00:00",
+      "equity": 922131.9994320972
+    },
+    {
+      "date": "2023-04-21 00:00:00",
+      "equity": 918206.9091000659
+    },
+    {
+      "date": "2023-04-24 00:00:00",
+      "equity": 921421.7488461597
+    },
+    {
+      "date": "2023-04-25 00:00:00",
+      "equity": 922915.9441586597
+    },
+    {
+      "date": "2023-04-26 00:00:00",
+      "equity": 923173.5740414722
+    },
+    {
+      "date": "2023-04-27 00:00:00",
+      "equity": 923757.5193539722
+    },
+    {
+      "date": "2023-04-28 00:00:00",
+      "equity": 923637.2927914722
+    },
+    {
+      "date": "2023-05-02 00:00:00",
+      "equity": 924401.5672055347
+    },
+    {
+      "date": "2023-05-03 00:00:00",
+      "equity": 924530.3875180347
+    },
+    {
+      "date": "2023-05-04 00:00:00",
+      "equity": 924332.8816586597
+    },
+    {
+      "date": "2023-05-05 00:00:00",
+      "equity": 925234.5486508472
+    },
+    {
+      "date": "2023-05-08 00:00:00",
+      "equity": 927115.1941586597
+    },
+    {
+      "date": "2023-05-09 00:00:00",
+      "equity": 926514.0828305347
+    },
+    {
+      "date": "2023-05-10 00:00:00",
+      "equity": 926797.4509945972
+    },
+    {
+      "date": "2023-05-11 00:00:00",
+      "equity": 927338.4705258472
+    },
+    {
+      "date": "2023-05-12 00:00:00",
+      "equity": 929062.5600824676
+    },
+    {
+      "date": "2023-05-15 00:00:00",
+      "equity": 930376.895775827
+    },
+    {
+      "date": "2023-05-16 00:00:00",
+      "equity": 931649.2753534637
+    },
+    {
+      "date": "2023-05-17 00:00:00",
+      "equity": 930447.0312128387
+    },
+    {
+      "date": "2023-05-18 00:00:00",
+      "equity": 928459.3374872528
+    },
+    {
+      "date": "2023-05-19 00:00:00",
+      "equity": 930051.4458856903
+    },
+    {
+      "date": "2023-05-22 00:00:00",
+      "equity": 930203.7433441863
+    },
+    {
+      "date": "2023-05-23 00:00:00",
+      "equity": 931386.3650482879
+    },
+    {
+      "date": "2023-05-24 00:00:00",
+      "equity": 931678.7189301238
+    },
+    {
+      "date": "2023-05-25 00:00:00",
+      "equity": 931293.3558319793
+    },
+    {
+      "date": "2023-05-26 00:00:00",
+      "equity": 932555.7291229949
+    },
+    {
+      "date": "2023-05-29 00:00:00",
+      "equity": 934947.5563935027
+    },
+    {
+      "date": "2023-05-30 00:00:00",
+      "equity": 934362.9172333465
+    },
+    {
+      "date": "2023-05-31 00:00:00",
+      "equity": 933915.8624237762
+    },
+    {
+      "date": "2023-06-01 00:00:00",
+      "equity": 934701.5613373504
+    },
+    {
+      "date": "2023-06-02 00:00:00",
+      "equity": 935907.1823700652
+    },
+    {
+      "date": "2023-06-05 00:00:00",
+      "equity": 935907.1823700652
+    },
+    {
+      "date": "2023-06-06 00:00:00",
+      "equity": 934578.0469981836
+    },
+    {
+      "date": "2023-06-07 00:00:00",
+      "equity": 935934.9949629668
+    },
+    {
+      "date": "2023-06-08 00:00:00",
+      "equity": 930964.8149092558
+    },
+    {
+      "date": "2023-06-09 00:00:00",
+      "equity": 927453.6341841582
+    },
+    {
+      "date": "2023-06-12 00:00:00",
+      "equity": 927907.3433516386
+    },
+    {
+      "date": "2023-06-13 00:00:00",
+      "equity": 926969.855192459
+    },
+    {
+      "date": "2023-06-14 00:00:00",
+      "equity": 925961.2416670683
+    },
+    {
+      "date": "2023-06-15 00:00:00",
+      "equity": 923525.3628218535
+    },
+    {
+      "date": "2023-06-16 00:00:00",
+      "equity": 926140.1923506621
+    },
+    {
+      "date": "2023-06-19 00:00:00",
+      "equity": 922335.08266496
+    },
+    {
+      "date": "2023-06-20 00:00:00",
+      "equity": 922701.1700062685
+    },
+    {
+      "date": "2023-06-21 00:00:00",
+      "equity": 924047.129967206
+    },
+    {
+      "date": "2023-06-22 00:00:00",
+      "equity": 922342.2466664248
+    },
+    {
+      "date": "2023-06-23 00:00:00",
+      "equity": 921033.815514081
+    },
+    {
+      "date": "2023-06-26 00:00:00",
+      "equity": 920292.497154706
+    },
+    {
+      "date": "2023-06-27 00:00:00",
+      "equity": 924911.4482655459
+    },
+    {
+      "date": "2023-06-28 00:00:00",
+      "equity": 928724.9875721865
+    },
+    {
+      "date": "2023-06-30 00:00:00",
+      "equity": 931638.6741566592
+    },
+    {
+      "date": "2023-07-03 00:00:00",
+      "equity": 938314.8469471865
+    },
+    {
+      "date": "2023-07-04 00:00:00",
+      "equity": 935732.7496571474
+    },
+    {
+      "date": "2023-07-05 00:00:00",
+      "equity": 936136.82875871
+    },
+    {
+      "date": "2023-07-06 00:00:00",
+      "equity": 939793.2651600771
+    },
+    {
+      "date": "2023-07-07 00:00:00",
+      "equity": 939970.8786244326
+    },
+    {
+      "date": "2023-07-10 00:00:00",
+      "equity": 947106.2671742373
+    },
+    {
+      "date": "2023-07-11 00:00:00",
+      "equity": 948522.9052967959
+    },
+    {
+      "date": "2023-07-12 00:00:00",
+      "equity": 948031.4730418548
+    },
+    {
+      "date": "2023-07-13 00:00:00",
+      "equity": 945617.4824412689
+    },
+    {
+      "date": "2023-07-14 00:00:00",
+      "equity": 945508.4436839446
+    },
+    {
+      "date": "2023-07-17 00:00:00",
+      "equity": 951775.719623886
+    },
+    {
+      "date": "2023-07-18 00:00:00",
+      "equity": 948907.5518382415
+    },
+    {
+      "date": "2023-07-19 00:00:00",
+      "equity": 953862.8014720306
+    },
+    {
+      "date": "2023-07-20 00:00:00",
+      "equity": 958496.3045848235
+    },
+    {
+      "date": "2023-07-21 00:00:00",
+      "equity": 952458.4643105889
+    },
+    {
+      "date": "2023-07-24 00:00:00",
+      "equity": 949830.6179971123
+    },
+    {
+      "date": "2023-07-25 00:00:00",
+      "equity": 947881.7160357638
+    },
+    {
+      "date": "2023-07-26 00:00:00",
+      "equity": 949347.0148638888
+    },
+    {
+      "date": "2023-07-27 00:00:00",
+      "equity": 946716.1947344943
+    },
+    {
+      "date": "2023-07-28 00:00:00",
+      "equity": 947461.8537615939
+    },
+    {
+      "date": "2023-07-31 00:00:00",
+      "equity": 946170.2209490939
+    },
+    {
+      "date": "2023-08-01 00:00:00",
+      "equity": 948049.7582415744
+    },
+    {
+      "date": "2023-08-02 00:00:00",
+      "equity": 942978.6546038791
+    },
+    {
+      "date": "2023-08-03 00:00:00",
+      "equity": 939080.2131976291
+    },
+    {
+      "date": "2023-08-04 00:00:00",
+      "equity": 943463.2299822969
+    },
+    {
+      "date": "2023-08-07 00:00:00",
+      "equity": 944410.0299090547
+    },
+    {
+      "date": "2023-08-08 00:00:00",
+      "equity": 942459.547975461
+    },
+    {
+      "date": "2023-08-09 00:00:00",
+      "equity": 942467.3092059297
+    },
+    {
+      "date": "2023-08-10 00:00:00",
+      "equity": 940000.4505633516
+    },
+    {
+      "date": "2023-08-11 00:00:00",
+      "equity": 943760.0483416719
+    },
+    {
+      "date": "2023-08-14 00:00:00",
+      "equity": 943137.562807004
+    },
+    {
+      "date": "2023-08-16 00:00:00",
+      "equity": 942103.3016375704
+    },
+    {
+      "date": "2023-08-17 00:00:00",
+      "equity": 942016.0984515352
+    },
+    {
+      "date": "2023-08-18 00:00:00",
+      "equity": 941635.0544451876
+    },
+    {
+      "date": "2023-08-21 00:00:00",
+      "equity": 944788.6175555391
+    },
+    {
+      "date": "2023-08-22 00:00:00",
+      "equity": 945752.9688128633
+    },
+    {
+      "date": "2023-08-23 00:00:00",
+      "equity": 944495.2743548555
+    },
+    {
+      "date": "2023-08-24 00:00:00",
+      "equity": 943558.4097918672
+    },
+    {
+      "date": "2023-08-25 00:00:00",
+      "equity": 942455.4810809297
+    },
+    {
+      "date": "2023-08-28 00:00:00",
+      "equity": 941169.3830584688
+    },
+    {
+      "date": "2023-08-29 00:00:00",
+      "equity": 939809.8217181368
+    },
+    {
+      "date": "2023-08-30 00:00:00",
+      "equity": 941554.6867694063
+    },
+    {
+      "date": "2023-08-31 00:00:00",
+      "equity": 941501.1648577852
+    },
+    {
+      "date": "2023-09-01 00:00:00",
+      "equity": 944470.5407122774
+    },
+    {
+      "date": "2023-09-04 00:00:00",
+      "equity": 949141.2984637422
+    },
+    {
+      "date": "2023-09-05 00:00:00",
+      "equity": 947074.1350482149
+    },
+    {
+      "date": "2023-09-06 00:00:00",
+      "equity": 949445.7817156954
+    },
+    {
+      "date": "2023-09-07 00:00:00",
+      "equity": 948622.2894671602
+    },
+    {
+      "date": "2023-09-08 00:00:00",
+      "equity": 950359.8478167696
+    },
+    {
+      "date": "2023-09-11 00:00:00",
+      "equity": 951175.104225461
+    },
+    {
+      "date": "2023-09-12 00:00:00",
+      "equity": 951109.2378924532
+    },
+    {
+      "date": "2023-09-13 00:00:00",
+      "equity": 955185.489357297
+    },
+    {
+      "date": "2023-09-14 00:00:00",
+      "equity": 955152.556190793
+    },
+    {
+      "date": "2023-09-15 00:00:00",
+      "equity": 958644.1547625704
+    },
+    {
+      "date": "2023-09-18 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-09-20 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-09-21 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-09-22 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-09-25 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-09-26 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-09-27 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-09-28 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-09-29 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-10-03 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-10-04 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-10-05 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-10-06 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-10-09 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-10-10 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-10-11 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-10-12 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-10-13 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-10-16 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-10-17 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-10-18 00:00:00",
+      "equity": 957781.804435422
+    },
+    {
+      "date": "2023-10-19 00:00:00",
+      "equity": 957864.7172345105
+    },
+    {
+      "date": "2023-10-20 00:00:00",
+      "equity": 958359.427195448
+    },
+    {
+      "date": "2023-10-23 00:00:00",
+      "equity": 955018.376414198
+    },
+    {
+      "date": "2023-10-25 00:00:00",
+      "equity": 953853.942820448
+    },
+    {
+      "date": "2023-10-26 00:00:00",
+      "equity": 954280.1566876355
+    },
+    {
+      "date": "2023-10-27 00:00:00",
+      "equity": 963193.2971217032
+    },
+    {
+      "date": "2023-10-30 00:00:00",
+      "equity": 963338.9780299063
+    },
+    {
+      "date": "2023-10-31 00:00:00",
+      "equity": 965462.1152369375
+    },
+    {
+      "date": "2023-11-01 00:00:00",
+      "equity": 961412.8117701407
+    },
+    {
+      "date": "2023-11-02 00:00:00",
+      "equity": 965177.6308619375
+    },
+    {
+      "date": "2023-11-03 00:00:00",
+      "equity": 963351.1608912344
+    },
+    {
+      "date": "2023-11-06 00:00:00",
+      "equity": 965778.1818873282
+    },
+    {
+      "date": "2023-11-07 00:00:00",
+      "equity": 966948.5219752188
+    },
+    {
+      "date": "2023-11-08 00:00:00",
+      "equity": 965413.7585474844
+    },
+    {
+      "date": "2023-11-09 00:00:00",
+      "equity": 965032.186526
+    },
+    {
+      "date": "2023-11-10 00:00:00",
+      "equity": 962611.7260767813
+    },
+    {
+      "date": "2023-11-13 00:00:00",
+      "equity": 963120.3266627188
+    },
+    {
+      "date": "2023-11-15 00:00:00",
+      "equity": 966079.8859888907
+    },
+    {
+      "date": "2023-11-16 00:00:00",
+      "equity": 970719.2465845938
+    },
+    {
+      "date": "2023-11-17 00:00:00",
+      "equity": 972329.6001002188
+    },
+    {
+      "date": "2023-11-20 00:00:00",
+      "equity": 974341.5268580313
+    },
+    {
+      "date": "2023-11-21 00:00:00",
+      "equity": 974988.3029810782
+    },
+    {
+      "date": "2023-11-22 00:00:00",
+      "equity": 975312.2143580313
+    },
+    {
+      "date": "2023-11-23 00:00:00",
+      "equity": 975483.58886975
+    },
+    {
+      "date": "2023-11-24 00:00:00",
+      "equity": 970796.9914576407
+    },
+    {
+      "date": "2023-11-28 00:00:00",
+      "equity": 972460.0170924063
+    },
+    {
+      "date": "2023-11-29 00:00:00",
+      "equity": 974104.0339381094
+    },
+    {
+      "date": "2023-11-30 00:00:00",
+      "equity": 976266.1086451407
+    },
+    {
+      "date": "2023-12-01 00:00:00",
+      "equity": 976297.5178248282
+    },
+    {
+      "date": "2023-12-04 00:00:00",
+      "equity": 976908.1096217032
+    },
+    {
+      "date": "2023-12-05 00:00:00",
+      "equity": 975152.3208033438
+    },
+    {
+      "date": "2023-12-06 00:00:00",
+      "equity": 979333.1074244375
+    },
+    {
+      "date": "2023-12-07 00:00:00",
+      "equity": 979141.3669459219
+    },
+    {
+      "date": "2023-12-08 00:00:00",
+      "equity": 983420.750979125
+    },
+    {
+      "date": "2023-12-11 00:00:00",
+      "equity": 986787.4917017813
+    },
+    {
+      "date": "2023-12-12 00:00:00",
+      "equity": 985269.4256763906
+    },
+    {
+      "date": "2023-12-13 00:00:00",
+      "equity": 985906.1056080313
+    },
+    {
+      "date": "2023-12-14 00:00:00",
+      "equity": 984262.1683521719
+    },
+    {
+      "date": "2023-12-15 00:00:00",
+      "equity": 981467.2738209219
+    },
+    {
+      "date": "2023-12-18 00:00:00",
+      "equity": 981387.7276783438
+    },
+    {
+      "date": "2023-12-19 00:00:00",
+      "equity": 988821.4561939688
+    },
+    {
+      "date": "2023-12-20 00:00:00",
+      "equity": 986255.3692799063
+    },
+    {
+      "date": "2023-12-21 00:00:00",
+      "equity": 986373.8788013906
+    },
+    {
+      "date": "2023-12-22 00:00:00",
+      "equity": 991014.6348589073
+    },
+    {
+      "date": "2023-12-26 00:00:00",
+      "equity": 991853.4017046104
+    },
+    {
+      "date": "2023-12-27 00:00:00",
+      "equity": 994200.1631792198
+    },
+    {
+      "date": "2023-12-28 00:00:00",
+      "equity": 997704.1277788292
+    },
+    {
+      "date": "2023-12-29 00:00:00",
+      "equity": 994396.2309428917
+    },
+    {
+      "date": "2024-01-01 00:00:00",
+      "equity": 996059.3168803917
+    },
+    {
+      "date": "2024-01-02 00:00:00",
+      "equity": 994721.3071147667
+    },
+    {
+      "date": "2024-01-03 00:00:00",
+      "equity": 991724.9213725792
+    },
+    {
+      "date": "2024-01-04 00:00:00",
+      "equity": 990047.6674663292
+    },
+    {
+      "date": "2024-01-05 00:00:00",
+      "equity": 990763.2560329987
+    },
+    {
+      "date": "2024-01-08 00:00:00",
+      "equity": 988788.6279812409
+    },
+    {
+      "date": "2024-01-09 00:00:00",
+      "equity": 987670.6409607574
+    },
+    {
+      "date": "2024-01-10 00:00:00",
+      "equity": 989541.7522888824
+    },
+    {
+      "date": "2024-01-11 00:00:00",
+      "equity": 987797.6089173004
+    },
+    {
+      "date": "2024-01-12 00:00:00",
+      "equity": 997803.211517398
+    },
+    {
+      "date": "2024-01-15 00:00:00",
+      "equity": 1015020.9851990386
+    },
+    {
+      "date": "2024-01-16 00:00:00",
+      "equity": 1011442.3096839018
+    },
+    {
+      "date": "2024-01-17 00:00:00",
+      "equity": 1011937.1905432768
+    },
+    {
+      "date": "2024-01-18 00:00:00",
+      "equity": 1009906.3487464018
+    },
+    {
+      "date": "2024-01-19 00:00:00",
+      "equity": 1013670.7501135893
+    },
+    {
+      "date": "2024-01-23 00:00:00",
+      "equity": 1006090.7471839018
+    },
+    {
+      "date": "2024-01-24 00:00:00",
+      "equity": 1010590.2428985669
+    },
+    {
+      "date": "2024-01-25 00:00:00",
+      "equity": 1007361.959329231
+    },
+    {
+      "date": "2024-01-29 00:00:00",
+      "equity": 1015250.5047393872
+    },
+    {
+      "date": "2024-01-30 00:00:00",
+      "equity": 1009762.3273712231
+    },
+    {
+      "date": "2024-01-31 00:00:00",
+      "equity": 1016978.3305450513
+    },
+    {
+      "date": "2024-02-01 00:00:00",
+      "equity": 1011840.7742706372
+    },
+    {
+      "date": "2024-02-02 00:00:00",
+      "equity": 1017485.400735481
+    },
+    {
+      "date": "2024-02-05 00:00:00",
+      "equity": 1012178.1096588208
+    },
+    {
+      "date": "2024-02-06 00:00:00",
+      "equity": 1025100.6362091138
+    },
+    {
+      "date": "2024-02-07 00:00:00",
+      "equity": 1024716.4511480785
+    },
+    {
+      "date": "2024-02-08 00:00:00",
+      "equity": 1015507.7779303051
+    },
+    {
+      "date": "2024-02-09 00:00:00",
+      "equity": 1014920.4072149731
+    },
+    {
+      "date": "2024-02-12 00:00:00",
+      "equity": 1017895.6865728833
+    },
+    {
+      "date": "2024-02-13 00:00:00",
+      "equity": 1018995.34349427
+    },
+    {
+      "date": "2024-02-14 00:00:00",
+      "equity": 1018888.8492315747
+    },
+    {
+      "date": "2024-02-15 00:00:00",
+      "equity": 1020226.5461309887
+    },
+    {
+      "date": "2024-02-16 00:00:00",
+      "equity": 1027644.199756477
+    },
+    {
+      "date": "2024-02-19 00:00:00",
+      "equity": 1025706.501697395
+    },
+    {
+      "date": "2024-02-20 00:00:00",
+      "equity": 1025694.7332037427
+    },
+    {
+      "date": "2024-02-21 00:00:00",
+      "equity": 1022928.626697395
+    },
+    {
+      "date": "2024-02-22 00:00:00",
+      "equity": 1025242.3676031567
+    },
+    {
+      "date": "2024-02-23 00:00:00",
+      "equity": 1027023.8893927075
+    },
+    {
+      "date": "2024-02-26 00:00:00",
+      "equity": 1025303.6287725903
+    },
+    {
+      "date": "2024-02-27 00:00:00",
+      "equity": 1025212.3887823559
+    },
+    {
+      "date": "2024-02-28 00:00:00",
+      "equity": 1019907.0063360669
+    },
+    {
+      "date": "2024-02-29 00:00:00",
+      "equity": 1020569.2598541332
+    },
+    {
+      "date": "2024-03-01 00:00:00",
+      "equity": 1023691.1260650707
+    },
+    {
+      "date": "2024-03-04 00:00:00",
+      "equity": 1021673.6504791332
+    },
+    {
+      "date": "2024-03-05 00:00:00",
+      "equity": 1025496.6916499049
+    },
+    {
+      "date": "2024-03-06 00:00:00",
+      "equity": 1026851.7971186549
+    },
+    {
+      "date": "2024-03-07 00:00:00",
+      "equity": 1027583.8089448268
+    },
+    {
+      "date": "2024-03-11 00:00:00",
+      "equity": 1027097.7060395534
+    },
+    {
+      "date": "2024-03-12 00:00:00",
+      "equity": 1028297.309799319
+    },
+    {
+      "date": "2024-03-13 00:00:00",
+      "equity": 1022730.6017915065
+    },
+    {
+      "date": "2024-03-14 00:00:00",
+      "equity": 1026784.1119233425
+    },
+    {
+      "date": "2024-03-15 00:00:00",
+      "equity": 1030767.030868655
+    },
+    {
+      "date": "2024-03-18 00:00:00",
+      "equity": 1031598.112533694
+    },
+    {
+      "date": "2024-03-19 00:00:00",
+      "equity": 1032076.3741303737
+    },
+    {
+      "date": "2024-03-20 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-03-21 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-03-22 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-03-26 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-03-27 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-03-28 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-04-01 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-04-02 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-04-03 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-04-04 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-04-05 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-04-08 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-04-09 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-04-10 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-04-12 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-04-15 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-04-16 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-04-18 00:00:00",
+      "equity": 1031986.4941010769
+    },
+    {
+      "date": "2024-04-19 00:00:00",
+      "equity": 1036863.9325528216
+    },
+    {
+      "date": "2024-04-22 00:00:00",
+      "equity": 1038032.9169278216
+    },
+    {
+      "date": "2024-04-23 00:00:00",
+      "equity": 1041337.6044278216
+    },
+    {
+      "date": "2024-04-24 00:00:00",
+      "equity": 1040519.0731778216
+    },
+    {
+      "date": "2024-04-25 00:00:00",
+      "equity": 1040181.1669278216
+    },
+    {
+      "date": "2024-04-26 00:00:00",
+      "equity": 1036744.7606778216
+    },
+    {
+      "date": "2024-04-29 00:00:00",
+      "equity": 1036533.0731778216
+    },
+    {
+      "date": "2024-04-30 00:00:00",
+      "equity": 1038534.7138028216
+    },
+    {
+      "date": "2024-05-02 00:00:00",
+      "equity": 1038344.1825528216
+    },
+    {
+      "date": "2024-05-03 00:00:00",
+      "equity": 1033433.0419278216
+    },
+    {
+      "date": "2024-05-06 00:00:00",
+      "equity": 1032604.3075528216
+    },
+    {
+      "date": "2024-05-07 00:00:00",
+      "equity": 1031424.3388028216
+    },
+    {
+      "date": "2024-05-08 00:00:00",
+      "equity": 1034238.9950528216
+    },
+    {
+      "date": "2024-05-09 00:00:00",
+      "equity": 1033629.0419278216
+    },
+    {
+      "date": "2024-05-10 00:00:00",
+      "equity": 1036308.0575528216
+    },
+    {
+      "date": "2024-05-13 00:00:00",
+      "equity": 1036282.1825528216
+    },
+    {
+      "date": "2024-05-14 00:00:00",
+      "equity": 1039550.8558087948
+    },
+    {
+      "date": "2024-05-15 00:00:00",
+      "equity": 1039246.6861310605
+    },
+    {
+      "date": "2024-05-16 00:00:00",
+      "equity": 1033303.6561017636
+    },
+    {
+      "date": "2024-05-17 00:00:00",
+      "equity": 1036770.9318585995
+    },
+    {
+      "date": "2024-05-21 00:00:00",
+      "equity": 1036762.1202130917
+    },
+    {
+      "date": "2024-05-22 00:00:00",
+      "equity": 1038048.2143293027
+    },
+    {
+      "date": "2024-05-23 00:00:00",
+      "equity": 1047163.7009015683
+    },
+    {
+      "date": "2024-05-24 00:00:00",
+      "equity": 1047460.7378278378
+    },
+    {
+      "date": "2024-05-27 00:00:00",
+      "equity": 1047046.1754499081
+    },
+    {
+      "date": "2024-05-28 00:00:00",
+      "equity": 1045141.6805768613
+    },
+    {
+      "date": "2024-05-29 00:00:00",
+      "equity": 1042897.1899152402
+    },
+    {
+      "date": "2024-05-30 00:00:00",
+      "equity": 1040575.8630109433
+    },
+    {
+      "date": "2024-05-31 00:00:00",
+      "equity": 1038399.7649274472
+    },
+    {
+      "date": "2024-06-03 00:00:00",
+      "equity": 1055328.0209699278
+    },
+    {
+      "date": "2024-06-04 00:00:00",
+      "equity": 1041166.5753864315
+    },
+    {
+      "date": "2024-06-05 00:00:00",
+      "equity": 1037229.2335114315
+    },
+    {
+      "date": "2024-06-06 00:00:00",
+      "equity": 1037229.2335114315
+    },
+    {
+      "date": "2024-06-07 00:00:00",
+      "equity": 1037229.2335114315
+    },
+    {
+      "date": "2024-06-10 00:00:00",
+      "equity": 1036860.7759578313
+    },
+    {
+      "date": "2024-06-11 00:00:00",
+      "equity": 1038300.6875218512
+    },
+    {
+      "date": "2024-06-12 00:00:00",
+      "equity": 1038622.0698155523
+    },
+    {
+      "date": "2024-06-13 00:00:00",
+      "equity": 1037426.6265184633
+    },
+    {
+      "date": "2024-06-14 00:00:00",
+      "equity": 1040057.4468309633
+    },
+    {
+      "date": "2024-06-18 00:00:00",
+      "equity": 1038845.1114427797
+    },
+    {
+      "date": "2024-06-19 00:00:00",
+      "equity": 1042161.2700426332
+    },
+    {
+      "date": "2024-06-20 00:00:00",
+      "equity": 1043957.8063548891
+    },
+    {
+      "date": "2024-06-21 00:00:00",
+      "equity": 1041518.671375641
+    },
+    {
+      "date": "2024-06-24 00:00:00",
+      "equity": 1040163.2444652406
+    },
+    {
+      "date": "2024-06-25 00:00:00",
+      "equity": 1050706.864460358
+    },
+    {
+      "date": "2024-06-26 00:00:00",
+      "equity": 1053904.7622264712
+    },
+    {
+      "date": "2024-06-27 00:00:00",
+      "equity": 1054483.0435375064
+    },
+    {
+      "date": "2024-06-28 00:00:00",
+      "equity": 1049190.9462474673
+    },
+    {
+      "date": "2024-07-01 00:00:00",
+      "equity": 1052926.3188425812
+    },
+    {
+      "date": "2024-07-02 00:00:00",
+      "equity": 1047788.1002756867
+    },
+    {
+      "date": "2024-07-03 00:00:00",
+      "equity": 1057846.5525461945
+    },
+    {
+      "date": "2024-07-04 00:00:00",
+      "equity": 1053272.7603709016
+    },
+    {
+      "date": "2024-07-05 00:00:00",
+      "equity": 1052156.3554331574
+    },
+    {
+      "date": "2024-07-08 00:00:00",
+      "equity": 1053808.527338675
+    },
+    {
+      "date": "2024-07-09 00:00:00",
+      "equity": 1055895.565241507
+    },
+    {
+      "date": "2024-07-10 00:00:00",
+      "equity": 1055443.4791209016
+    },
+    {
+      "date": "2024-07-11 00:00:00",
+      "equity": 1056483.4676157746
+    },
+    {
+      "date": "2024-07-12 00:00:00",
+      "equity": 1060888.58108013
+    },
+    {
+      "date": "2024-07-15 00:00:00",
+      "equity": 1062876.3496043
+    },
+    {
+      "date": "2024-07-16 00:00:00",
+      "equity": 1064250.9775339875
+    },
+    {
+      "date": "2024-07-18 00:00:00",
+      "equity": 1068781.135920218
+    },
+    {
+      "date": "2024-07-19 00:00:00",
+      "equity": 1062758.160578421
+    },
+    {
+      "date": "2024-07-22 00:00:00",
+      "equity": 1058041.0162302766
+    },
+    {
+      "date": "2024-07-23 00:00:00",
+      "equity": 1056903.231257132
+    },
+    {
+      "date": "2024-07-24 00:00:00",
+      "equity": 1048384.054612845
+    },
+    {
+      "date": "2024-07-25 00:00:00",
+      "equity": 1047804.5766050324
+    },
+    {
+      "date": "2024-07-26 00:00:00",
+      "equity": 1051472.5530454621
+    },
+    {
+      "date": "2024-07-29 00:00:00",
+      "equity": 1049614.674505423
+    },
+    {
+      "date": "2024-07-30 00:00:00",
+      "equity": 1048996.3163511262
+    },
+    {
+      "date": "2024-07-31 00:00:00",
+      "equity": 1050188.0700132356
+    },
+    {
+      "date": "2024-08-01 00:00:00",
+      "equity": 1050972.2444517121
+    },
+    {
+      "date": "2024-08-02 00:00:00",
+      "equity": 1050314.5457212434
+    },
+    {
+      "date": "2024-08-05 00:00:00",
+      "equity": 1048734.9179136262
+    },
+    {
+      "date": "2024-08-06 00:00:00",
+      "equity": 1047489.7824155793
+    },
+    {
+      "date": "2024-08-07 00:00:00",
+      "equity": 1046589.3882877259
+    },
+    {
+      "date": "2024-08-08 00:00:00",
+      "equity": 1042737.387555304
+    },
+    {
+      "date": "2024-08-09 00:00:00",
+      "equity": 1047293.4701969055
+    },
+    {
+      "date": "2024-08-12 00:00:00",
+      "equity": 1046417.2841617493
+    },
+    {
+      "date": "2024-08-13 00:00:00",
+      "equity": 1047369.5010806946
+    },
+    {
+      "date": "2024-08-14 00:00:00",
+      "equity": 1052077.048932257
+    },
+    {
+      "date": "2024-08-16 00:00:00",
+      "equity": 1057810.4682437805
+    },
+    {
+      "date": "2024-08-19 00:00:00",
+      "equity": 1058257.5803043274
+    },
+    {
+      "date": "2024-08-20 00:00:00",
+      "equity": 1058090.988751593
+    },
+    {
+      "date": "2024-08-21 00:00:00",
+      "equity": 1057756.7366763977
+    },
+    {
+      "date": "2024-08-22 00:00:00",
+      "equity": 1058918.9045230774
+    },
+    {
+      "date": "2024-08-23 00:00:00",
+      "equity": 1058304.0195133118
+    },
+    {
+      "date": "2024-08-26 00:00:00",
+      "equity": 1065664.359845343
+    },
+    {
+      "date": "2024-08-27 00:00:00",
+      "equity": 1063693.1002164367
+    },
+    {
+      "date": "2024-08-28 00:00:00",
+      "equity": 1065592.420651007
+    },
+    {
+      "date": "2024-08-29 00:00:00",
+      "equity": 1066132.2646451476
+    },
+    {
+      "date": "2024-08-30 00:00:00",
+      "equity": 1067440.87109046
+    },
+    {
+      "date": "2024-09-02 00:00:00",
+      "equity": 1066440.330441046
+    },
+    {
+      "date": "2024-09-03 00:00:00",
+      "equity": 1065832.666744757
+    },
+    {
+      "date": "2024-09-04 00:00:00",
+      "equity": 1065906.1502652648
+    },
+    {
+      "date": "2024-09-05 00:00:00",
+      "equity": 1065075.1971402648
+    },
+    {
+      "date": "2024-09-06 00:00:00",
+      "equity": 1064625.8072476867
+    },
+    {
+      "date": "2024-09-09 00:00:00",
+      "equity": 1064818.0013394835
+    },
+    {
+      "date": "2024-09-10 00:00:00",
+      "equity": 1066807.7619596007
+    },
+    {
+      "date": "2024-09-11 00:00:00",
+      "equity": 1066804.9370084289
+    },
+    {
+      "date": "2024-09-12 00:00:00",
+      "equity": 1070702.4998746398
+    },
+    {
+      "date": "2024-09-13 00:00:00",
+      "equity": 1067599.5673844055
+    },
+    {
+      "date": "2024-09-16 00:00:00",
+      "equity": 1067599.5673844055
+    },
+    {
+      "date": "2024-09-17 00:00:00",
+      "equity": 1067599.5673844055
+    },
+    {
+      "date": "2024-09-18 00:00:00",
+      "equity": 1067599.5673844055
+    },
+    {
+      "date": "2024-09-19 00:00:00",
+      "equity": 1063775.335001891
+    },
+    {
+      "date": "2024-09-20 00:00:00",
+      "equity": 1065802.0149335316
+    },
+    {
+      "date": "2024-09-23 00:00:00",
+      "equity": 1064321.675578063
+    },
+    {
+      "date": "2024-09-24 00:00:00",
+      "equity": 1065960.6055097035
+    },
+    {
+      "date": "2024-09-25 00:00:00",
+      "equity": 1064779.8796796254
+    },
+    {
+      "date": "2024-09-26 00:00:00",
+      "equity": 1066788.9116620473
+    },
+    {
+      "date": "2024-09-27 00:00:00",
+      "equity": 1066753.6731366566
+    },
+    {
+      "date": "2024-09-30 00:00:00",
+      "equity": 1066630.309611266
+    },
+    {
+      "date": "2024-10-01 00:00:00",
+      "equity": 1068498.3530682973
+    },
+    {
+      "date": "2024-10-03 00:00:00",
+      "equity": 1062647.4726972035
+    },
+    {
+      "date": "2024-10-04 00:00:00",
+      "equity": 1063845.8235272816
+    },
+    {
+      "date": "2024-10-07 00:00:00",
+      "equity": 1063105.6653241566
+    },
+    {
+      "date": "2024-10-08 00:00:00",
+      "equity": 1061519.5989179066
+    },
+    {
+      "date": "2024-10-09 00:00:00",
+      "equity": 1062999.9382733754
+    },
+    {
+      "date": "2024-10-10 00:00:00",
+      "equity": 1060832.292765563
+    },
+    {
+      "date": "2024-10-11 00:00:00",
+      "equity": 1061995.4050702504
+    },
+    {
+      "date": "2024-10-14 00:00:00",
+      "equity": 1069485.2383222035
+    },
+    {
+      "date": "2024-10-15 00:00:00",
+      "equity": 1063634.3809003285
+    },
+    {
+      "date": "2024-10-16 00:00:00",
+      "equity": 1063352.4153241566
+    },
+    {
+      "date": "2024-10-17 00:00:00",
+      "equity": 1062154.0300702504
+    },
+    {
+      "date": "2024-10-18 00:00:00",
+      "equity": 1069168.034220641
+    },
+    {
+      "date": "2024-10-21 00:00:00",
+      "equity": 1068974.1821698598
+    },
+    {
+      "date": "2024-10-22 00:00:00",
+      "equity": 1068040.1374921254
+    },
+    {
+      "date": "2024-10-23 00:00:00",
+      "equity": 1068656.9551190785
+    },
+    {
+      "date": "2024-10-24 00:00:00",
+      "equity": 1068551.251017516
+    },
+    {
+      "date": "2024-10-25 00:00:00",
+      "equity": 1067335.217814391
+    },
+    {
+      "date": "2024-10-28 00:00:00",
+      "equity": 1072675.0190839223
+    },
+    {
+      "date": "2024-10-29 00:00:00",
+      "equity": 1073943.9272870473
+    },
+    {
+      "date": "2024-10-30 00:00:00",
+      "equity": 1075018.9145917348
+    },
+    {
+      "date": "2024-10-31 00:00:00",
+      "equity": 1070278.2944745473
+    },
+    {
+      "date": "2024-11-01 00:00:00",
+      "equity": 1070369.379093464
+    },
+    {
+      "date": "2024-11-04 00:00:00",
+      "equity": 1064680.4765055734
+    },
+    {
+      "date": "2024-11-05 00:00:00",
+      "equity": 1068334.3080485421
+    },
+    {
+      "date": "2024-11-06 00:00:00",
+      "equity": 1076216.611515339
+    },
+    {
+      "date": "2024-11-07 00:00:00",
+      "equity": 1072848.578312214
+    },
+    {
+      "date": "2024-11-08 00:00:00",
+      "equity": 1072143.4440348702
+    },
+    {
+      "date": "2024-11-11 00:00:00",
+      "equity": 1076686.4556759791
+    },
+    {
+      "date": "2024-11-12 00:00:00",
+      "equity": 1076274.0635861354
+    },
+    {
+      "date": "2024-11-13 00:00:00",
+      "equity": 1072803.5670041041
+    },
+    {
+      "date": "2024-11-14 00:00:00",
+      "equity": 1071996.0499142604
+    },
+    {
+      "date": "2024-11-18 00:00:00",
+      "equity": 1064843.966906448
+    },
+    {
+      "date": "2024-11-19 00:00:00",
+      "equity": 1060343.8016525414
+    },
+    {
+      "date": "2024-11-21 00:00:00",
+      "equity": 1061725.7313400414
+    },
+    {
+      "date": "2024-11-22 00:00:00",
+      "equity": 1064024.0689181664
+    },
+    {
+      "date": "2024-11-25 00:00:00",
+      "equity": 1063521.0513400414
+    },
+    {
+      "date": "2024-11-26 00:00:00",
+      "equity": 1064110.4165744164
+    },
+    {
+      "date": "2024-11-27 00:00:00",
+      "equity": 1062506.0577944508
+    },
+    {
+      "date": "2024-11-28 00:00:00",
+      "equity": 1059783.9464663258
+    },
+    {
+      "date": "2024-11-29 00:00:00",
+      "equity": 1064485.3231402098
+    },
+    {
+      "date": "2024-12-02 00:00:00",
+      "equity": 1066245.327534741
+    },
+    {
+      "date": "2024-12-03 00:00:00",
+      "equity": 1074575.9327593504
+    },
+    {
+      "date": "2024-12-04 00:00:00",
+      "equity": 1077438.8329058348
+    },
+    {
+      "date": "2024-12-05 00:00:00",
+      "equity": 1084516.409565991
+    },
+    {
+      "date": "2024-12-06 00:00:00",
+      "equity": 1084612.2613726316
+    },
+    {
+      "date": "2024-12-09 00:00:00",
+      "equity": 1088255.4852495848
+    },
+    {
+      "date": "2024-12-10 00:00:00",
+      "equity": 1093153.547017163
+    },
+    {
+      "date": "2024-12-11 00:00:00",
+      "equity": 1091566.3429156004
+    },
+    {
+      "date": "2024-12-12 00:00:00",
+      "equity": 1088017.745503491
+    },
+    {
+      "date": "2024-12-13 00:00:00",
+      "equity": 1093613.6578570066
+    },
+    {
+      "date": "2024-12-16 00:00:00",
+      "equity": 1091728.8272906004
+    },
+    {
+      "date": "2024-12-17 00:00:00",
+      "equity": 1086215.5167437254
+    },
+    {
+      "date": "2024-12-18 00:00:00",
+      "equity": 1083827.4706011473
+    },
+    {
+      "date": "2024-12-19 00:00:00",
+      "equity": 1079235.6243695905
+    },
+    {
+      "date": "2024-12-20 00:00:00",
+      "equity": 1071432.7121991804
+    },
+    {
+      "date": "2024-12-23 00:00:00",
+      "equity": 1072670.7326996687
+    },
+    {
+      "date": "2024-12-24 00:00:00",
+      "equity": 1070218.2229340437
+    },
+    {
+      "date": "2024-12-26 00:00:00",
+      "equity": 1070419.773293787
+    },
+    {
+      "date": "2024-12-27 00:00:00",
+      "equity": 1068937.6478360232
+    },
+    {
+      "date": "2024-12-30 00:00:00",
+      "equity": 1067857.492714444
+    },
+    {
+      "date": "2024-12-31 00:00:00",
+      "equity": 1064691.8347615632
+    },
+    {
+      "date": "2025-01-01 00:00:00",
+      "equity": 1064028.469984952
+    },
+    {
+      "date": "2025-01-02 00:00:00",
+      "equity": 1067385.6907796296
+    },
+    {
+      "date": "2025-01-03 00:00:00",
+      "equity": 1060404.1633138093
+    },
+    {
+      "date": "2025-01-06 00:00:00",
+      "equity": 1053422.0639017927
+    },
+    {
+      "date": "2025-01-07 00:00:00",
+      "equity": 1049797.6920975936
+    },
+    {
+      "date": "2025-01-08 00:00:00",
+      "equity": 1051071.2537431014
+    },
+    {
+      "date": "2025-01-09 00:00:00",
+      "equity": 1051325.814896272
+    },
+    {
+      "date": "2025-01-10 00:00:00",
+      "equity": 1053835.9187956452
+    },
+    {
+      "date": "2025-01-13 00:00:00",
+      "equity": 1047974.6920500399
+    },
+    {
+      "date": "2025-01-14 00:00:00",
+      "equity": 1036425.0785685945
+    },
+    {
+      "date": "2025-01-15 00:00:00",
+      "equity": 1033558.6891642977
+    },
+    {
+      "date": "2025-01-16 00:00:00",
+      "equity": 1035056.4543620516
+    },
+    {
+      "date": "2025-01-17 00:00:00",
+      "equity": 1029785.5925750803
+    },
+    {
+      "date": "2025-01-20 00:00:00",
+      "equity": 1034168.7236419749
+    },
+    {
+      "date": "2025-01-21 00:00:00",
+      "equity": 1031468.7364593577
+    },
+    {
+      "date": "2025-01-22 00:00:00",
+      "equity": 1033387.5557952952
+    },
+    {
+      "date": "2025-01-23 00:00:00",
+      "equity": 1034226.0116668772
+    },
+    {
+      "date": "2025-01-24 00:00:00",
+      "equity": 1034141.4367157053
+    },
+    {
+      "date": "2025-01-27 00:00:00",
+      "equity": 1031537.8529144358
+    },
+    {
+      "date": "2025-01-28 00:00:00",
+      "equity": 1037196.9804779124
+    },
+    {
+      "date": "2025-01-29 00:00:00",
+      "equity": 1039980.6267181467
+    },
+    {
+      "date": "2025-01-30 00:00:00",
+      "equity": 1042563.2790008616
+    },
+    {
+      "date": "2025-01-31 00:00:00",
+      "equity": 1042262.2739349436
+    },
+    {
+      "date": "2025-02-01 00:00:00",
+      "equity": 1044353.8732391428
+    },
+    {
+      "date": "2025-02-03 00:00:00",
+      "equity": 1052096.4017425608
+    },
+    {
+      "date": "2025-02-04 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-02-05 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-02-06 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-02-07 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-02-10 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-02-11 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-02-12 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-02-13 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-02-14 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-02-17 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-02-18 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-02-19 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-02-20 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-02-21 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-02-24 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-02-25 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-02-27 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-02-28 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-03 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-04 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-05 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-06 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-07 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-10 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-11 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-12 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-13 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-17 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-18 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-19 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-20 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-21 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-24 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-25 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-26 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-27 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-03-28 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-04-01 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-04-02 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-04-03 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-04-04 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-04-07 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-04-08 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-04-09 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-04-11 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-04-15 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-04-16 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-04-17 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-04-21 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-04-22 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-04-23 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-04-24 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-04-25 00:00:00",
+      "equity": 1044433.6940325999
+    },
+    {
+      "date": "2025-04-28 00:00:00",
+      "equity": 1046964.7364440702
+    },
+    {
+      "date": "2025-04-29 00:00:00",
+      "equity": 1044454.0150065336
+    },
+    {
+      "date": "2025-04-30 00:00:00",
+      "equity": 1036206.9988016996
+    },
+    {
+      "date": "2025-05-02 00:00:00",
+      "equity": 1033870.6496806059
+    },
+    {
+      "date": "2025-05-05 00:00:00",
+      "equity": 1025304.0587687406
+    },
+    {
+      "date": "2025-05-06 00:00:00",
+      "equity": 1024785.8298844632
+    },
+    {
+      "date": "2025-05-07 00:00:00",
+      "equity": 1025190.2928320114
+    },
+    {
+      "date": "2025-05-08 00:00:00",
+      "equity": 1027107.0213476364
+    },
+    {
+      "date": "2025-05-09 00:00:00",
+      "equity": 1023396.6053320114
+    },
+    {
+      "date": "2025-05-12 00:00:00",
+      "equity": 1032523.2108007614
+    },
+    {
+      "date": "2025-05-13 00:00:00",
+      "equity": 1030870.2244726364
+    },
+    {
+      "date": "2025-05-14 00:00:00",
+      "equity": 1031204.3279882614
+    },
+    {
+      "date": "2025-05-15 00:00:00",
+      "equity": 1033595.8826757614
+    },
+    {
+      "date": "2025-05-16 00:00:00",
+      "equity": 1033543.1385351364
+    },
+    {
+      "date": "2025-05-19 00:00:00",
+      "equity": 1032488.0408788864
+    },
+    {
+      "date": "2025-05-20 00:00:00",
+      "equity": 1031257.0936132614
+    },
+    {
+      "date": "2025-05-21 00:00:00",
+      "equity": 1031608.7928320114
+    },
+    {
+      "date": "2025-05-22 00:00:00",
+      "equity": 1029973.3807226364
+    },
+    {
+      "date": "2025-05-23 00:00:00",
+      "equity": 1033771.7322851364
+    },
+    {
+      "date": "2025-05-26 00:00:00",
+      "equity": 1034668.5760351364
+    },
+    {
+      "date": "2025-05-27 00:00:00",
+      "equity": 1031221.9236913864
+    },
+    {
+      "date": "2025-05-28 00:00:00",
+      "equity": 1031063.6483007614
+    },
+    {
+      "date": "2025-05-29 00:00:00",
+      "equity": 1032294.5955663864
+    },
+    {
+      "date": "2025-05-30 00:00:00",
+      "equity": 1030624.0135351364
+    },
+    {
+      "date": "2025-06-02 00:00:00",
+      "equity": 1031010.9041601364
+    },
+    {
+      "date": "2025-06-03 00:00:00",
+      "equity": 1028742.4334570114
+    },
+    {
+      "date": "2025-06-04 00:00:00",
+      "equity": 1026896.0233007614
+    },
+    {
+      "date": "2025-06-05 00:00:00",
+      "equity": 1024785.8279882614
+    },
+    {
+      "date": "2025-06-06 00:00:00",
+      "equity": 1031046.0740820114
+    },
+    {
+      "date": "2025-06-09 00:00:00",
+      "equity": 1035495.0799413864
+    },
+    {
+      "date": "2025-06-10 00:00:00",
+      "equity": 1037763.5291601364
+    },
+    {
+      "date": "2025-06-11 00:00:00",
+      "equity": 1037517.3397070114
+    },
+    {
+      "date": "2025-06-12 00:00:00",
+      "equity": 1033040.5252538864
+    },
+    {
+      "date": "2025-06-13 00:00:00",
+      "equity": 1031221.9822851364
+    },
+    {
+      "date": "2025-06-16 00:00:00",
+      "equity": 1033654.9422460739
+    },
+    {
+      "date": "2025-06-17 00:00:00",
+      "equity": 1031322.1766210739
+    },
+    {
+      "date": "2025-06-18 00:00:00",
+      "equity": 1030993.2000585739
+    },
+    {
+      "date": "2025-06-19 00:00:00",
+      "equity": 1028290.9192968551
+    },
+    {
+      "date": "2025-06-20 00:00:00",
+      "equity": 1031050.9344335739
+    },
+    {
+      "date": "2025-06-23 00:00:00",
+      "equity": 1024871.3052050582
+    },
+    {
+      "date": "2025-06-24 00:00:00",
+      "equity": 1026900.5517870894
+    },
+    {
+      "date": "2025-06-25 00:00:00",
+      "equity": 1026066.3506152144
+    },
+    {
+      "date": "2025-06-26 00:00:00",
+      "equity": 1031091.1145312301
+    },
+    {
+      "date": "2025-06-27 00:00:00",
+      "equity": 1030339.1509081832
+    },
+    {
+      "date": "2025-06-30 00:00:00",
+      "equity": 1025436.8388964644
+    },
+    {
+      "date": "2025-07-01 00:00:00",
+      "equity": 1020767.6626269332
+    },
+    {
+      "date": "2025-07-02 00:00:00",
+      "equity": 1017921.1999120894
+    },
+    {
+      "date": "2025-07-03 00:00:00",
+      "equity": 1017406.8944921675
+    },
+    {
+      "date": "2025-07-04 00:00:00",
+      "equity": 1017839.80171873
+    },
+    {
+      "date": "2025-07-07 00:00:00",
+      "equity": 1017351.3944921675
+    },
+    {
+      "date": "2025-07-08 00:00:00",
+      "equity": 1018276.3944921675
+    },
+    {
+      "date": "2025-07-09 00:00:00",
+      "equity": 1017288.4962988081
+    },
+    {
+      "date": "2025-07-10 00:00:00",
+      "equity": 1017103.4962988081
+    },
+    {
+      "date": "2025-07-11 00:00:00",
+      "equity": 1015841.80171873
+    },
+    {
+      "date": "2025-07-14 00:00:00",
+      "equity": 1014187.8944921675
+    },
+    {
+      "date": "2025-07-15 00:00:00",
+      "equity": 1013996.9781054488
+    },
+    {
+      "date": "2025-07-16 00:00:00",
+      "equity": 1013996.9781054488
+    },
+    {
+      "date": "2025-07-17 00:00:00",
+      "equity": 1013996.9781054488
+    },
+    {
+      "date": "2025-07-18 00:00:00",
+      "equity": 1013996.9781054488
+    },
+    {
+      "date": "2025-07-21 00:00:00",
+      "equity": 1013996.9781054488
+    },
+    {
+      "date": "2025-07-22 00:00:00",
+      "equity": 1013996.9781054488
+    },
+    {
+      "date": "2025-07-23 00:00:00",
+      "equity": 1013996.9781054488
+    },
+    {
+      "date": "2025-07-24 00:00:00",
+      "equity": 1013996.9781054488
+    },
+    {
+      "date": "2025-07-25 00:00:00",
+      "equity": 1013996.9781054488
+    },
+    {
+      "date": "2025-07-28 00:00:00",
+      "equity": 1013996.9781054488
+    },
+    {
+      "date": "2025-07-29 00:00:00",
+      "equity": 1013996.9781054488
+    },
+    {
+      "date": "2025-07-30 00:00:00",
+      "equity": 1013996.9781054488
+    },
+    {
+      "date": "2025-07-31 00:00:00",
+      "equity": 1013996.9781054488
+    },
+    {
+      "date": "2025-08-01 00:00:00",
+      "equity": 1013996.9781054488
+    },
+    {
+      "date": "2025-08-04 00:00:00",
+      "equity": 1013996.9781054488
+    },
+    {
+      "date": "2025-08-05 00:00:00",
+      "equity": 1013996.9781054488
+    },
+    {
+      "date": "2025-08-06 00:00:00",
+      "equity": 1013784.7564844154
+    },
+    {
+      "date": "2025-08-07 00:00:00",
+      "equity": 1012545.5865625404
+    },
+    {
+      "date": "2025-08-08 00:00:00",
+      "equity": 1011251.6681055091
+    },
+    {
+      "date": "2025-08-11 00:00:00",
+      "equity": 1012607.1912988685
+    },
+    {
+      "date": "2025-08-12 00:00:00",
+      "equity": 1010238.4327539466
+    },
+    {
+      "date": "2025-08-13 00:00:00",
+      "equity": 1011012.0548242591
+    },
+    {
+      "date": "2025-08-14 00:00:00",
+      "equity": 1010019.354384806
+    },
+    {
+      "date": "2025-08-18 00:00:00",
+      "equity": 1016009.7706445716
+    },
+    {
+      "date": "2025-08-19 00:00:00",
+      "equity": 1018522.3072656654
+    },
+    {
+      "date": "2025-08-20 00:00:00",
+      "equity": 1022972.3355859779
+    },
+    {
+      "date": "2025-08-21 00:00:00",
+      "equity": 1021479.8568262123
+    },
+    {
+      "date": "2025-08-22 00:00:00",
+      "equity": 1020240.6869043373
+    },
+    {
+      "date": "2025-08-25 00:00:00",
+      "equity": 1020357.090712931
+    },
+    {
+      "date": "2025-08-26 00:00:00",
+      "equity": 1024533.2584375404
+    },
+    {
+      "date": "2025-08-28 00:00:00",
+      "equity": 1021918.0135644935
+    },
+    {
+      "date": "2025-08-29 00:00:00",
+      "equity": 1022287.7093652748
+    },
+    {
+      "date": "2025-09-01 00:00:00",
+      "equity": 1021582.5482324623
+    },
+    {
+      "date": "2025-09-02 00:00:00",
+      "equity": 1023465.2577051185
+    },
+    {
+      "date": "2025-09-03 00:00:00",
+      "equity": 1022623.1578516029
+    },
+    {
+      "date": "2025-09-04 00:00:00",
+      "equity": 1022753.2572168373
+    },
+    {
+      "date": "2025-09-05 00:00:00",
+      "equity": 1020480.3001855873
+    },
+    {
+      "date": "2025-09-08 00:00:00",
+      "equity": 1019829.9212793373
+    },
+    {
+      "date": "2025-09-09 00:00:00",
+      "equity": 1022050.7909136128
+    },
+    {
+      "date": "2025-09-10 00:00:00",
+      "equity": 1024299.2055864644
+    },
+    {
+      "date": "2025-09-11 00:00:00",
+      "equity": 1023290.0725298238
+    },
+    {
+      "date": "2025-09-12 00:00:00",
+      "equity": 1020000.1096391988
+    },
+    {
+      "date": "2025-09-15 00:00:00",
+      "equity": 1019319.0990190816
+    },
+    {
+      "date": "2025-09-16 00:00:00",
+      "equity": 1018148.2523393941
+    },
+    {
+      "date": "2025-09-17 00:00:00",
+      "equity": 1017395.4973345113
+    },
+    {
+      "date": "2025-09-18 00:00:00",
+      "equity": 1019239.3642778706
+    },
+    {
+      "date": "2025-09-19 00:00:00",
+      "equity": 1015329.6600542378
+    },
+    {
+      "date": "2025-09-22 00:00:00",
+      "equity": 1014348.6627349019
+    },
+    {
+      "date": "2025-09-23 00:00:00",
+      "equity": 1011557.8369292378
+    },
+    {
+      "date": "2025-09-24 00:00:00",
+      "equity": 1012988.3018950581
+    },
+    {
+      "date": "2025-09-25 00:00:00",
+      "equity": 1012273.060806191
+    },
+    {
+      "date": "2025-09-26 00:00:00",
+      "equity": 1010744.4190825581
+    },
+    {
+      "date": "2025-09-29 00:00:00",
+      "equity": 1009327.9646147847
+    },
+    {
+      "date": "2025-09-30 00:00:00",
+      "equity": 1009384.0582427144
+    },
+    {
+      "date": "2025-10-01 00:00:00",
+      "equity": 1011277.3515776753
+    },
+    {
+      "date": "2025-10-03 00:00:00",
+      "equity": 1011768.2009429097
+    },
+    {
+      "date": "2025-10-06 00:00:00",
+      "equity": 1013423.0404204488
+    },
+    {
+      "date": "2025-10-07 00:00:00",
+      "equity": 1012735.8719634175
+    },
+    {
+      "date": "2025-10-08 00:00:00",
+      "equity": 1012562.2434233784
+    },
+    {
+      "date": "2025-10-09 00:00:00",
+      "equity": 1015719.311599648
+    },
+    {
+      "date": "2025-10-10 00:00:00",
+      "equity": 1017797.9308623433
+    },
+    {
+      "date": "2025-10-13 00:00:00",
+      "equity": 1016358.3775176167
+    },
+    {
+      "date": "2025-10-14 00:00:00",
+      "equity": 1014567.4251860738
+    },
+    {
+      "date": "2025-10-15 00:00:00",
+      "equity": 1020829.4689482808
+    },
+    {
+      "date": "2025-10-16 00:00:00",
+      "equity": 1033012.5408476949
+    },
+    {
+      "date": "2025-10-17 00:00:00",
+      "equity": 1034853.514724648
+    },
+    {
+      "date": "2025-10-20 00:00:00",
+      "equity": 1034915.3187407613
+    },
+    {
+      "date": "2025-10-21 00:00:00",
+      "equity": 1033844.5072783589
+    },
+    {
+      "date": "2025-10-23 00:00:00",
+      "equity": 1034087.5489653706
+    },
+    {
+      "date": "2025-10-24 00:00:00",
+      "equity": 1032305.2107695699
+    },
+    {
+      "date": "2025-10-27 00:00:00",
+      "equity": 1029388.8163603902
+    },
+    {
+      "date": "2025-10-28 00:00:00",
+      "equity": 1028677.0252226949
+    },
+    {
+      "date": "2025-10-29 00:00:00",
+      "equity": 1028137.631545937
+    },
+    {
+      "date": "2025-10-30 00:00:00",
+      "equity": 1028046.6211089253
+    },
+    {
+      "date": "2025-10-31 00:00:00",
+      "equity": 1024096.6137847066
+    },
+    {
+      "date": "2025-11-03 00:00:00",
+      "equity": 1024308.894790566
+    },
+    {
+      "date": "2025-11-04 00:00:00",
+      "equity": 1022725.2506255269
+    },
+    {
+      "date": "2025-11-06 00:00:00",
+      "equity": 1021812.8667143941
+    },
+    {
+      "date": "2025-11-07 00:00:00",
+      "equity": 1021742.000686562
+    },
+    {
+      "date": "2025-11-10 00:00:00",
+      "equity": 1022120.2980498433
+    },
+    {
+      "date": "2025-11-11 00:00:00",
+      "equity": 1022387.8853911519
+    },
+    {
+      "date": "2025-11-12 00:00:00",
+      "equity": 1023613.2782744527
+    },
+    {
+      "date": "2025-11-13 00:00:00",
+      "equity": 1022452.276077187
+    },
+    {
+      "date": "2025-11-14 00:00:00",
+      "equity": 1022305.6137847066
+    },
+    {
+      "date": "2025-11-17 00:00:00",
+      "equity": 1023970.0188750386
+    },
+    {
+      "date": "2025-11-18 00:00:00",
+      "equity": 1022460.6562651753
+    },
+    {
+      "date": "2025-11-19 00:00:00",
+      "equity": 1025428.9222563863
+    },
+    {
+      "date": "2025-11-20 00:00:00",
+      "equity": 1024883.8394927144
+    },
+    {
+      "date": "2025-11-21 00:00:00",
+      "equity": 1024226.5664214253
+    },
+    {
+      "date": "2025-11-24 00:00:00",
+      "equity": 1022573.9732207417
+    },
+    {
+      "date": "2025-11-25 00:00:00",
+      "equity": 1020347.4849394917
+    },
+    {
+      "date": "2025-11-26 00:00:00",
+      "equity": 1024953.2454985738
+    },
+    {
+      "date": "2025-11-27 00:00:00",
+      "equity": 1024004.1474150777
+    },
+    {
+      "date": "2025-11-28 00:00:00",
+      "equity": 1024391.1694487691
+    },
+    {
+      "date": "2025-12-01 00:00:00",
+      "equity": 1026167.7617949605
+    },
+    {
+      "date": "2025-12-02 00:00:00",
+      "equity": 1025515.448318398
+    },
+    {
+      "date": "2025-12-03 00:00:00",
+      "equity": 1023425.838943398
+    },
+    {
+      "date": "2025-12-04 00:00:00",
+      "equity": 1022644.2344512105
+    },
+    {
+      "date": "2025-12-05 00:00:00",
+      "equity": 1024827.536209023
+    },
+    {
+      "date": "2025-12-08 00:00:00",
+      "equity": 1018471.0614165425
+    },
+    {
+      "date": "2025-12-09 00:00:00",
+      "equity": 1018160.6219023824
+    },
+    {
+      "date": "2025-12-10 00:00:00",
+      "equity": 1018303.8960723042
+    },
+    {
+      "date": "2025-12-11 00:00:00",
+      "equity": 1022339.6219023824
+    },
+    {
+      "date": "2025-12-12 00:00:00",
+      "equity": 1022053.0614165425
+    },
+    {
+      "date": "2025-12-15 00:00:00",
+      "equity": 1022427.1823882222
+    },
+    {
+      "date": "2025-12-16 00:00:00",
+      "equity": 1022514.742874062
+    },
+    {
+      "date": "2025-12-17 00:00:00",
+      "equity": 1021782.4243315816
+    },
+    {
+      "date": "2025-12-18 00:00:00",
+      "equity": 1021097.8638457417
+    },
+    {
+      "date": "2025-12-19 00:00:00",
+      "equity": 1020691.8960723042
+    },
+    {
+      "date": "2025-12-22 00:00:00",
+      "equity": 1019911.8194731831
+    },
+    {
+      "date": "2025-12-23 00:00:00",
+      "equity": 1020946.6219023824
+    },
+    {
+      "date": "2025-12-24 00:00:00",
+      "equity": 1021026.2146147847
+    },
+    {
+      "date": "2025-12-26 00:00:00",
+      "equity": 1021066.0170439839
+    },
+    {
+      "date": "2025-12-29 00:00:00",
+      "equity": 1020620.2589873433
+    },
+    {
+      "date": "2025-12-30 00:00:00",
+      "equity": 1020150.6219023824
+    },
+    {
+      "date": "2025-12-31 00:00:00",
+      "equity": 1024003.2589873433
+    },
+    {
+      "date": "2026-01-01 00:00:00",
+      "equity": 1025332.5775298238
+    },
+    {
+      "date": "2026-01-02 00:00:00",
+      "equity": 1023525.6541289449
+    },
+    {
+      "date": "2026-01-05 00:00:00",
+      "equity": 1023191.3355864644
+    },
+    {
+      "date": "2026-01-06 00:00:00",
+      "equity": 1019649.1380156636
+    },
+    {
+      "date": "2026-01-07 00:00:00",
+      "equity": 1019458.093643105
+    },
+    {
+      "date": "2026-01-08 00:00:00",
+      "equity": 1018582.5009307027
+    },
+    {
+      "date": "2026-01-09 00:00:00",
+      "equity": 1018088.9726714253
+    },
+    {
+      "date": "2026-01-12 00:00:00",
+      "equity": 1018606.379959023
+    },
+    {
+      "date": "2026-01-13 00:00:00",
+      "equity": 1018550.6541289449
+    },
+    {
+      "date": "2026-01-14 00:00:00",
+      "equity": 1016353.6985015034
+    },
+    {
+      "date": "2026-01-16 00:00:00",
+      "equity": 1015239.3033599019
+    },
+    {
+      "date": "2026-01-19 00:00:00",
+      "equity": 1018701.8960723042
+    },
+    {
+      "date": "2026-01-20 00:00:00",
+      "equity": 1017468.093643105
+    },
+    {
+      "date": "2026-01-21 00:00:00",
+      "equity": 1016592.5009307027
+    },
+    {
+      "date": "2026-01-22 00:00:00",
+      "equity": 1019266.6985015034
+    },
+    {
+      "date": "2026-01-23 00:00:00",
+      "equity": 1018058.093643105
+    },
+    {
+      "date": "2026-01-27 00:00:00",
+      "equity": 1015306.3033599019
+    },
+    {
+      "date": "2026-01-28 00:00:00",
+      "equity": 1016736.7385015035
+    },
+    {
+      "date": "2026-01-29 00:00:00",
+      "equity": 1016086.7385015035
+    },
+    {
+      "date": "2026-01-30 00:00:00",
+      "equity": 1015787.7385015035
+    },
+    {
+      "date": "2026-02-02 00:00:00",
+      "equity": 1013720.7385015035
+    },
+    {
+      "date": "2026-02-03 00:00:00",
+      "equity": 1014435.7385015035
+    },
+    {
+      "date": "2026-02-04 00:00:00",
+      "equity": 1015162.5870774953
+    },
+    {
+      "date": "2026-02-05 00:00:00",
+      "equity": 1012615.4559739797
+    },
+    {
+      "date": "2026-02-06 00:00:00",
+      "equity": 1011329.1096605031
+    },
+    {
+      "date": "2026-02-09 00:00:00",
+      "equity": 1017239.0082444875
+    },
+    {
+      "date": "2026-02-10 00:00:00",
+      "equity": 1018242.8981126515
+    },
+    {
+      "date": "2026-02-11 00:00:00",
+      "equity": 1021601.606120464
+    },
+    {
+      "date": "2026-02-12 00:00:00",
+      "equity": 1017884.6028245656
+    },
+    {
+      "date": "2026-02-13 00:00:00",
+      "equity": 1016016.481811382
+    },
+    {
+      "date": "2026-02-16 00:00:00",
+      "equity": 1022010.3884275929
+    },
+    {
+      "date": "2026-02-17 00:00:00",
+      "equity": 1023825.0814817921
+    },
+    {
+      "date": "2026-02-18 00:00:00",
+      "equity": 1027367.1899412648
+    },
+    {
+      "date": "2026-02-19 00:00:00",
+      "equity": 1019186.2773436086
+    },
+    {
+      "date": "2026-02-20 00:00:00",
+      "equity": 1024272.5827635304
+    },
+    {
+      "date": "2026-02-23 00:00:00",
+      "equity": 1031476.0930784718
+    },
+    {
+      "date": "2026-02-24 00:00:00",
+      "equity": 1030693.1897581593
+    },
+    {
+      "date": "2026-02-25 00:00:00",
+      "equity": 1029257.1828001515
+    },
+    {
+      "date": "2026-02-26 00:00:00",
+      "equity": 1030117.3811644093
+    },
+    {
+      "date": "2026-02-27 00:00:00",
+      "equity": 1024676.7820433156
+    },
+    {
+      "date": "2026-03-02 00:00:00",
+      "equity": 1019754.786132671
+    },
+    {
+      "date": "2026-03-04 00:00:00",
+      "equity": 1012219.5839720265
+    },
+    {
+      "date": "2026-03-05 00:00:00",
+      "equity": 1013034.1554368702
+    },
+    {
+      "date": "2026-03-06 00:00:00",
+      "equity": 1008949.9596360889
+    },
+    {
+      "date": "2026-03-09 00:00:00",
+      "equity": 1003833.3624681202
+    },
+    {
+      "date": "2026-03-10 00:00:00",
+      "equity": 1003763.934948589
+    },
+    {
+      "date": "2026-03-11 00:00:00",
+      "equity": 1001449.7264524952
+    },
+    {
+      "date": "2026-03-12 00:00:00",
+      "equity": 1001139.434948589
+    },
+    {
+      "date": "2026-03-13 00:00:00",
+      "equity": 999503.8307005421
+    },
+    {
+      "date": "2026-03-16 00:00:00",
+      "equity": 1000014.2335325733
+    },
+    {
+      "date": "2026-03-17 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-03-18 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-03-19 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-03-20 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-03-23 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-03-24 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-03-25 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-03-27 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-03-30 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-01 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-02 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-06 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-07 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-08 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-09 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-10 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-13 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-15 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-16 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-17 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-20 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-21 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-22 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-23 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-24 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-27 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-28 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-29 00:00:00",
+      "equity": 997641.7421165577
+    },
+    {
+      "date": "2026-04-30 00:00:00",
+      "equity": 997641.7421165577
+    }
+  ]
+}
