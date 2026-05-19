@@ -559,7 +559,11 @@ def compute_cpr(df: pd.DataFrame, live_price: float = 0.0) -> dict:
         return {}
 
 
-def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0) -> dict:
+def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_entry: bool = True) -> dict:
+    """
+    is_entry=True  → full CPR gate applies (Analyse tab / Screener — deciding whether to buy)
+    is_entry=False → CPR shown as info only, no verdict downgrade (Watchlist / Portfolio — monitoring holds)
+    """
     l = df.iloc[-1]; p = df.iloc[-2]; r5 = df.tail(5)
     support, resistance = find_sr(df)
     pattern  = candle_pattern(df)
@@ -775,18 +779,21 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0) -> 
     elif total>=55: verdict,vcol = "WATCHLIST",  C["amber"]
     else:           verdict,vcol = "AVOID",       C["red"]
 
-    # ── CPR hard filter: REJECT downgrades the verdict ────────────────────────
+    # ── CPR hard filter: only applies when evaluating a NEW entry ─────────────
+    # For existing holds (is_entry=False), CPR is shown as info but never
+    # changes the verdict — swing trades exit via ATR stop / Supertrend, not CPR.
     cpr_downgraded = False
-    if cpr_signal == "REJECT":
-        if verdict == "STRONG BUY":
+    if is_entry:
+        if cpr_signal == "REJECT":
+            if verdict == "STRONG BUY":
+                verdict, vcol = "WATCHLIST", C["amber"]
+                cpr_downgraded = True
+            elif verdict == "WATCHLIST":
+                verdict, vcol = "AVOID", C["red"]
+                cpr_downgraded = True
+        elif cpr_signal == "CAUTION" and verdict == "STRONG BUY":
             verdict, vcol = "WATCHLIST", C["amber"]
             cpr_downgraded = True
-        elif verdict == "WATCHLIST":
-            verdict, vcol = "AVOID", C["red"]
-            cpr_downgraded = True
-    elif cpr_signal == "CAUTION" and verdict == "STRONG BUY":
-        verdict, vcol = "WATCHLIST", C["amber"]
-        cpr_downgraded = True
 
     atr  = float(l["atr"])
     cmp  = float(l["close"])
@@ -1147,36 +1154,73 @@ SCREENER_LISTS = {
     "All 300+":         list(dict.fromkeys(NIFTY50+NEXT50+MIDCAP+SMALLCAP)),
 }
 
-# ── WATCHLIST STORAGE (JSON file locally, session_state fallback on cloud) ──────
+# ── WATCHLIST STORAGE ──────────────────────────────────────────────────────────
+# Priority: 1) Supabase (persistent, cloud-safe)  2) Local JSON  3) session_state
 WATCHLIST_FILE = os.path.join(os.path.dirname(__file__), "watchlist.json")
-_CLOUD = not os.access(os.path.dirname(os.path.abspath(__file__)), os.W_OK)
+
+def _get_supabase():
+    """Return a Supabase client if credentials are configured, else None."""
+    try:
+        url = st.secrets.get("SUPABASE_URL", "")
+        key = st.secrets.get("SUPABASE_KEY", "")
+        if not url or not key:
+            return None
+        from supabase import create_client
+        return create_client(url, key)
+    except Exception:
+        return None
 
 def load_watchlist() -> list:
-    # On Streamlit Cloud the filesystem is read-only; fall back to session_state
-    if _CLOUD:
-        return st.session_state.get("_watchlist", [])
+    sb = _get_supabase()
+    if sb:
+        try:
+            rows = sb.table("watchlist").select("symbol,company").execute().data
+            return rows if rows else []
+        except Exception:
+            pass
     try:
-        with open(WATCHLIST_FILE,"r") as f: return json.load(f)
-    except Exception: return []
+        with open(WATCHLIST_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        pass
+    return st.session_state.get("_watchlist", [])
 
 def save_watchlist(wl: list):
-    if _CLOUD:
-        st.session_state["_watchlist"] = wl
-        return
+    """Save full watchlist — used only for local JSON / session_state paths."""
     try:
-        with open(WATCHLIST_FILE,"w") as f: json.dump(wl, f, indent=2)
+        with open(WATCHLIST_FILE, "w") as f:
+            json.dump(wl, f, indent=2)
     except Exception:
-        st.session_state["_watchlist"] = wl   # silent fallback
+        st.session_state["_watchlist"] = wl
 
 def add_to_watchlist(symbol: str, company: str) -> bool:
+    sb = _get_supabase()
+    if sb:
+        try:
+            existing = sb.table("watchlist").select("symbol").eq("symbol", symbol).execute().data
+            if existing:
+                return False
+            sb.table("watchlist").insert({"symbol": symbol, "company": company}).execute()
+            return True
+        except Exception:
+            pass
+    # fallback: local file / session_state
     wl = load_watchlist()
-    if not any(w["symbol"]==symbol for w in wl):
-        wl.append({"symbol":symbol,"company":company})
-        save_watchlist(wl); return True
+    if not any(w["symbol"] == symbol for w in wl):
+        wl.append({"symbol": symbol, "company": company})
+        save_watchlist(wl)
+        return True
     return False
 
 def remove_from_watchlist(symbol: str):
-    save_watchlist([w for w in load_watchlist() if w["symbol"]!=symbol])
+    sb = _get_supabase()
+    if sb:
+        try:
+            sb.table("watchlist").delete().eq("symbol", symbol).execute()
+            return
+        except Exception:
+            pass
+    save_watchlist([w for w in load_watchlist() if w["symbol"] != symbol])
 
 # ── SCREENER ───────────────────────────────────────────────────────────────────
 def _score_one(sym: str, nifty_ret: float = 0.0):
@@ -1846,7 +1890,8 @@ def tab_watchlist():
             try:
                 _r = fetch_ohlcv(s); _i = add_indicators(_r)
                 if len(_i) >= 5:
-                    st.session_state[f"wl_sd_{s}"] = score(_i, nifty_ret=nifty_r)
+                    # is_entry=False: monitoring a held position — CPR doesn't change verdict
+                    st.session_state[f"wl_sd_{s}"] = score(_i, nifty_ret=nifty_r, is_entry=False)
                     st.session_state[f"wl_df_{s}"] = _i
             except Exception: pass
         cached_sd = st.session_state.get(f"wl_sd_{s}")
@@ -1903,6 +1948,24 @@ def tab_watchlist():
                                 f"<div style='font-size:14px;font-weight:600;color:{C['text']};font-family:JetBrains Mono'>{sd2['l1']} / {sd2['l2']} / {sd2['l3']}</div>"
                                 f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Trend / Mom / Setup</div></div>",
                                 unsafe_allow_html=True)
+                # ── Hold guidance banner (CPR not used as exit signal) ──────────
+                _sl2   = tr2["sl"]
+                _st2   = sd2.get("details", {}).get("supertrend_val", None)
+                _cpr2  = sd2.get("cpr_signal", "")
+                _cpr2_color = {"CONFIRM": C["green"], "NEUTRAL": C["amber"],
+                               "CAUTION": C["amber"], "REJECT": C["red"]}.get(_cpr2, C["muted"])
+                _exit_msg = f"Hold while price stays above SL ₹{_sl2:,.2f}"
+                if _st2:
+                    _exit_msg += f" · Supertrend support ₹{_st2:,.2f}"
+                _exit_msg += " · Exit on SL breach or Supertrend flip — not on daily CPR change"
+                st.markdown(
+                    f"<div style='background:rgba(67,97,238,0.08);border:1px solid {C['blue']}40;"
+                    f"border-radius:8px;padding:10px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px'>"
+                    f"<span style='font-family:DM Sans,sans-serif;font-size:12px;color:{C['text']}'>"
+                    f"📌 <b>Swing Hold</b> — {_exit_msg}</span>"
+                    f"<span style='font-family:JetBrains Mono,monospace;font-size:11px;color:{_cpr2_color}'>"
+                    f"CPR today: {_cpr2}</span></div>",
+                    unsafe_allow_html=True)
                 st.markdown("<br>", unsafe_allow_html=True)
                 tc = [(tr2["entry_label"],f"₹{tr2['entry']:,.2f}",entry_c),("ADR Stop",f"₹{tr2['sl']:,.2f}",C["red"]),
                       ("T1 (70%)",f"₹{tr2['t1']:,.2f}",C["green"]),("T2 (45%)",f"₹{tr2['t2']:,.2f}","#00a86b"),
