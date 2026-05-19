@@ -1222,6 +1222,155 @@ def remove_from_watchlist(symbol: str):
             pass
     save_watchlist([w for w in load_watchlist() if w["symbol"] != symbol])
 
+# ── HOLDINGS STORAGE ───────────────────────────────────────────────────────────
+# Supabase table: holdings (symbol, company, entry_price, qty, entry_date)
+# Fallback: holdings.json
+HOLDINGS_FILE = os.path.join(os.path.dirname(__file__), "holdings.json")
+
+def load_holdings() -> list:
+    sb = _get_supabase()
+    if sb:
+        try:
+            rows = sb.table("holdings").select("*").execute().data
+            return rows if rows else []
+        except Exception:
+            pass
+    try:
+        with open(HOLDINGS_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        pass
+    return st.session_state.get("_holdings", [])
+
+def save_holdings(hl: list):
+    try:
+        with open(HOLDINGS_FILE, "w") as f:
+            json.dump(hl, f, indent=2)
+    except Exception:
+        st.session_state["_holdings"] = hl
+
+def add_holding(symbol: str, company: str, entry_price: float, qty: int) -> bool:
+    sb = _get_supabase()
+    entry_date = datetime.now().strftime("%Y-%m-%d")
+    if sb:
+        try:
+            existing = sb.table("holdings").select("symbol").eq("symbol", symbol).execute().data
+            if existing:
+                # Update entry price and qty if re-adding
+                sb.table("holdings").update({
+                    "entry_price": entry_price, "qty": qty, "entry_date": entry_date
+                }).eq("symbol", symbol).execute()
+                return True
+            sb.table("holdings").insert({
+                "symbol": symbol, "company": company,
+                "entry_price": entry_price, "qty": qty, "entry_date": entry_date
+            }).execute()
+            return True
+        except Exception:
+            pass
+    hl = load_holdings()
+    hl = [h for h in hl if h["symbol"] != symbol]   # replace if exists
+    hl.append({"symbol": symbol, "company": company,
+               "entry_price": entry_price, "qty": qty, "entry_date": entry_date})
+    save_holdings(hl)
+    return True
+
+def remove_holding(symbol: str):
+    sb = _get_supabase()
+    if sb:
+        try:
+            sb.table("holdings").delete().eq("symbol", symbol).execute()
+            return
+        except Exception:
+            pass
+    save_holdings([h for h in load_holdings() if h["symbol"] != symbol])
+
+# ── HOLD / EXIT SIGNAL ENGINE ──────────────────────────────────────────────────
+def get_hold_exit_signal(sd: dict, entry_price: float) -> dict:
+    """
+    Swing trading exit logic — priority order:
+    1. SL breached (ATR stop)      → EXIT immediately
+    2. Supertrend flipped bearish  → EXIT immediately
+    3. Stage 4 / 3 detected        → EXIT / CAUTION
+    4. T2 hit                      → HOLD, trail stop
+    5. T1 hit                      → BOOK PARTIAL (70%), make SL free
+    6. Score < 45                  → CAUTION, watch closely
+    7. Everything intact           → HOLD
+    """
+    cmp        = sd.get("cmp", entry_price)
+    tr         = sd.get("trade", {})
+    atr_stop   = tr.get("sl", 0)
+    t1         = tr.get("t1", 0)
+    t2         = tr.get("t2", 0)
+    t3         = tr.get("t3", 0)
+    stage      = sd.get("stage", "")
+    total      = sd.get("total", 0)
+    st_detail  = sd.get("details", {}).get("supertrend", {})
+    st_bull    = st_detail.get("value", "Bullish") == "Bullish"
+    pnl_pct    = (cmp - entry_price) / max(entry_price, 0.01) * 100
+
+    # ── Priority 1: Hard stop hit ─────────────────────────────────────────────
+    if atr_stop > 0 and cmp < atr_stop:
+        return {
+            "signal": "EXIT NOW", "color": C["red"], "urgency": "high",
+            "reason": f"Stop Loss breached — CMP ₹{cmp:,.2f} < ATR Stop ₹{atr_stop:,.2f}",
+            "action": "Exit full position immediately. Loss-limiting — no exceptions.",
+        }
+
+    # ── Priority 2: Supertrend flipped bearish ────────────────────────────────
+    if not st_bull:
+        return {
+            "signal": "EXIT NOW", "color": C["red"], "urgency": "high",
+            "reason": "Supertrend flipped Bearish — short-term trend reversed",
+            "action": f"Exit if SL at ₹{atr_stop:,.2f} not already triggered. Don't wait.",
+        }
+
+    # ── Priority 3: Stage deterioration ──────────────────────────────────────
+    if stage == "4":
+        return {
+            "signal": "EXIT", "color": C["red"], "urgency": "high",
+            "reason": "Stock entered Stage 4 — declining phase, institutional selling",
+            "action": "Exit position. Stage 4 can persist for months.",
+        }
+    if stage == "3":
+        return {
+            "signal": "CAUTION", "color": C["amber"], "urgency": "medium",
+            "reason": "Stage 3 — distribution / topping pattern detected",
+            "action": f"Tighten stop to ₹{atr_stop:,.2f}. Exit if price breaks below.",
+        }
+
+    # ── Priority 4: T2 hit — trail stop, ride T3 ─────────────────────────────
+    if t2 > 0 and cmp >= t2:
+        return {
+            "signal": "HOLD", "color": C["green"], "urgency": "low",
+            "reason": f"T2 ₹{t2:,.2f} hit (+{((t2-entry_price)/entry_price*100):.1f}%) ✓ — trade is running",
+            "action": f"Trail stop to T1 ₹{t1:,.2f}. Target T3 ₹{t3:,.2f}. Let the runner ride.",
+        }
+
+    # ── Priority 5: T1 hit — book partial, make trade free ────────────────────
+    if t1 > 0 and cmp >= t1:
+        return {
+            "signal": "BOOK PARTIAL", "color": C["blue"], "urgency": "low",
+            "reason": f"T1 ₹{t1:,.2f} hit (+{((t1-entry_price)/entry_price*100):.1f}%) ✓ — first target reached",
+            "action": f"Book 70% of position. Move SL to entry ₹{entry_price:,.2f} (free trade). Hold 30% for T2 ₹{t2:,.2f}.",
+        }
+
+    # ── Priority 6: Score deteriorated badly ──────────────────────────────────
+    if total < 45:
+        return {
+            "signal": "CAUTION", "color": C["amber"], "urgency": "medium",
+            "reason": f"Score dropped to {total}/100 — momentum weakening",
+            "action": f"Watch closely. Exit if CMP closes below ₹{atr_stop:,.2f}.",
+        }
+
+    # ── Priority 7: All clear — hold the swing ────────────────────────────────
+    pnl_str = f"{pnl_pct:+.1f}%"
+    return {
+        "signal": "HOLD", "color": C["green"], "urgency": "low",
+        "reason": f"Swing intact — Stage {stage}, Supertrend Bullish, score {total}/100 ({pnl_str} from entry)",
+        "action": f"Hold. Stop at ₹{atr_stop:,.2f}. Next target T1 ₹{t1:,.2f}.",
+    }
+
 # ── SCREENER ───────────────────────────────────────────────────────────────────
 def _score_one(sym: str, nifty_ret: float = 0.0):
     try:
@@ -1896,7 +2045,7 @@ def tab_watchlist():
             except Exception: pass
         cached_sd = st.session_state.get(f"wl_sd_{s}")
         cached_df = st.session_state.get(f"wl_df_{s}")
-        rc1,rc2,rc3,rc4,rc5,rc6 = st.columns([1.4,2.8,1.2,1.0,1.8,0.7])
+        rc1,rc2,rc3,rc4,rc5,rc6,rc7 = st.columns([1.4,2.2,1.2,1.0,1.8,1.4,0.7])
         with rc1:
             st.markdown(f"<span style='font-family:JetBrains Mono,monospace;font-size:14px;font-weight:700;color:{C['text']}'>{s}</span>",
                         unsafe_allow_html=True)
@@ -1918,10 +2067,41 @@ def tab_watchlist():
                             f"border-radius:6px;padding:3px 10px;font-family:DM Sans,sans-serif;font-size:12px;font-weight:700'>{_v}</span>",
                             unsafe_allow_html=True)
         with rc6:
+            # "📥 Purchased" — mark as bought, moves to Holdings tab
+            if st.button("📥 Purchased", key=f"buy_{s}", help=f"Mark {s} as purchased"):
+                st.session_state[f"buy_modal_{s}"] = True
+        with rc7:
             if st.button("✕", key=f"rm_{s}", help=f"Remove {s}"):
                 remove_from_watchlist(s)
                 for k in [f"wl_sd_{s}",f"wl_df_{s}"]: st.session_state.pop(k,None)
                 st.rerun()
+
+        # ── Purchase form (shown inline when button clicked) ──────────────────
+        if st.session_state.get(f"buy_modal_{s}"):
+            with st.container():
+                st.markdown(f"<div style='background:{C['card']};border:1px solid {C['blue']}60;"
+                            f"border-radius:10px;padding:14px 18px;margin:6px 0 10px 0'>",
+                            unsafe_allow_html=True)
+                _default_entry = float(cached_sd["trade"]["entry"]) if cached_sd else 100.0
+                _default_cmp   = float(cached_sd["cmp"]) if cached_sd else _default_entry
+                bf1, bf2, bf3, bf4 = st.columns([1.5,1.5,1,1])
+                with bf1:
+                    _ep = st.number_input(f"Entry Price ₹ ({s})", min_value=0.01,
+                                          value=_default_cmp, step=0.5, key=f"ep_{s}")
+                with bf2:
+                    _qty = st.number_input("Qty (shares)", min_value=1, value=10,
+                                           step=1, key=f"qty_{s}")
+                with bf3:
+                    if st.button("✅ Confirm", key=f"confirm_buy_{s}"):
+                        add_holding(s, cmp_name, float(_ep), int(_qty))
+                        st.session_state.pop(f"buy_modal_{s}", None)
+                        st.success(f"{s} added to Holdings!")
+                        st.rerun()
+                with bf4:
+                    if st.button("Cancel", key=f"cancel_buy_{s}"):
+                        st.session_state.pop(f"buy_modal_{s}", None)
+                        st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
         with st.expander("📊 Chart & Trade Setup", expanded=False):
             if cached_sd is None or cached_df is None:
                 st.warning(f"Could not load data for {s}.")
@@ -2101,6 +2281,135 @@ def tab_portfolio(capital, risk_pct, tg_token, tg_chat):
             m1.metric("Win Rate", f"{len(wins)/len(port['closed_trades'])*100:.1f}%")
             m2.metric("Avg Win",  f"₹{np.mean(wins):,.0f}"  if wins  else "—")
             m3.metric("Avg Loss", f"₹{np.mean(losss):,.0f}" if losss else "—")
+
+# ── TAB: HOLDINGS ──────────────────────────────────────────────────────────────
+def tab_holdings():
+    st.markdown("### 📦 My Holdings")
+    st.caption("Swing trading exit monitor — scored against ATR Stop, Supertrend, Stage, and targets.")
+
+    holdings = load_holdings()
+    nifty_r  = fetch_nifty_3m_return()
+
+    if not holdings:
+        st.markdown(f"""
+        <div style='text-align:center;padding:60px 20px;background:{C['card']};
+                    border:1px solid {C['border']};border-radius:12px;margin-top:1rem'>
+            <div style='font-size:40px;margin-bottom:12px'>📦</div>
+            <div style='font-size:18px;font-weight:600;color:{C['text']};margin-bottom:8px'>No holdings yet</div>
+            <div style='font-size:13px;color:{C['muted']}'>
+                Go to <b>Watchlist</b> → click <b>📥 Purchased</b> on any stock to track it here
+            </div>
+        </div>""", unsafe_allow_html=True)
+        return
+
+    # ── Summary row ──────────────────────────────────────────────────────────
+    hold_count = 0; exit_count = 0; caution_count = 0; partial_count = 0
+
+    # ── Per-holding cards ─────────────────────────────────────────────────────
+    for h in holdings:
+        sym        = h["symbol"]
+        company    = h.get("company", sym)
+        entry_px   = float(h.get("entry_price", 0))
+        qty        = int(h.get("qty", 1))
+        entry_date = h.get("entry_date", "—")
+
+        # Score the stock (monitoring mode — CPR doesn't affect verdict)
+        cache_key = f"hld_sd_{sym}"
+        if cache_key not in st.session_state:
+            try:
+                _r = fetch_ohlcv(sym); _i = add_indicators(_r)
+                if len(_i) >= 5:
+                    _lp = fetch_live_price(sym).get("price", 0.0) or 0.0
+                    st.session_state[cache_key] = (score(_i, nifty_ret=nifty_r,
+                                                         live_price=_lp, is_entry=False), _i)
+            except Exception:
+                st.session_state[cache_key] = None
+
+        cached = st.session_state.get(cache_key)
+        if cached is None:
+            st.warning(f"Could not load data for {sym}")
+            continue
+        sd, df_h = cached
+
+        cmp        = sd.get("cmp", entry_px)
+        pnl        = (cmp - entry_px) * qty
+        pnl_pct    = (cmp - entry_px) / max(entry_px, 0.01) * 100
+        pnl_color  = C["green"] if pnl >= 0 else C["red"]
+        pnl_sign   = "+" if pnl >= 0 else ""
+
+        sig        = get_hold_exit_signal(sd, entry_px)
+        signal     = sig["signal"]
+        sig_color  = sig["color"]
+        reason     = sig["reason"]
+        action     = sig["action"]
+
+        # Count for summary
+        if signal == "HOLD":             hold_count    += 1
+        elif signal in ("EXIT NOW","EXIT"): exit_count += 1
+        elif signal == "CAUTION":        caution_count += 1
+        elif signal == "BOOK PARTIAL":   partial_count += 1
+
+        # ── Card ──────────────────────────────────────────────────────────────
+        border_color = sig_color
+        st.markdown(
+            f"<div style='background:{C['card']};border:1.5px solid {hex_rgba(border_color,0.5)};"
+            f"border-radius:12px;padding:16px 20px;margin-bottom:12px'>",
+            unsafe_allow_html=True)
+
+        h1,h2,h3,h4,h5,h6 = st.columns([1.6,1.4,1.4,1.6,2.8,1.2])
+        with h1:
+            st.markdown(f"<div style='font-family:JetBrains Mono,monospace;font-size:15px;"
+                        f"font-weight:700;color:{C['text']}'>{sym}</div>"
+                        f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>{company[:20]}</div>",
+                        unsafe_allow_html=True)
+        with h2:
+            st.markdown(f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Entry</div>"
+                        f"<div style='font-family:JetBrains Mono,monospace;font-size:13px;color:{C['text']}'>₹{entry_px:,.2f}</div>"
+                        f"<div style='font-size:10px;color:{C['dim']};font-family:DM Sans'>{qty} shares · {entry_date}</div>",
+                        unsafe_allow_html=True)
+        with h3:
+            st.markdown(f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>CMP</div>"
+                        f"<div style='font-family:JetBrains Mono,monospace;font-size:13px;color:{C['text']}'>₹{cmp:,.2f}</div>"
+                        f"<div style='font-size:11px;font-weight:600;color:{pnl_color};font-family:JetBrains Mono'>{pnl_sign}{pnl_pct:.1f}%</div>",
+                        unsafe_allow_html=True)
+        with h4:
+            st.markdown(f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>P&L</div>"
+                        f"<div style='font-family:JetBrains Mono,monospace;font-size:13px;color:{pnl_color}'>"
+                        f"{pnl_sign}₹{abs(pnl):,.0f}</div>"
+                        f"<div style='font-size:10px;color:{C['dim']};font-family:DM Sans'>Score: {sd['total']}/100</div>",
+                        unsafe_allow_html=True)
+        with h5:
+            st.markdown(
+                f"<div style='background:{hex_rgba(sig_color,0.1)};border:1px solid {hex_rgba(sig_color,0.4)};"
+                f"border-radius:8px;padding:8px 12px'>"
+                f"<div style='font-family:DM Sans,sans-serif;font-size:13px;font-weight:700;color:{sig_color}'>"
+                f"{signal}</div>"
+                f"<div style='font-size:11px;color:{C['text']};font-family:DM Sans;margin-top:3px'>{reason}</div>"
+                f"<div style='font-size:10px;color:{C['muted']};font-family:DM Sans;margin-top:4px'>"
+                f"→ {action}</div></div>",
+                unsafe_allow_html=True)
+        with h6:
+            if st.button("🔄 Refresh", key=f"ref_hld_{sym}"):
+                st.session_state.pop(cache_key, None)
+                st.rerun()
+            if st.button("✕ Remove", key=f"del_hld_{sym}"):
+                remove_holding(sym)
+                st.session_state.pop(cache_key, None)
+                st.rerun()
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── Summary banner ────────────────────────────────────────────────────────
+    st.divider()
+    sc1,sc2,sc3,sc4 = st.columns(4)
+    sc1.metric("✅ Hold",         hold_count)
+    sc2.metric("🚨 Exit Signal",  exit_count,    delta="Action needed" if exit_count else None,
+               delta_color="inverse" if exit_count else "off")
+    sc3.metric("⚠️ Caution",      caution_count)
+    sc4.metric("📤 Book Partial", partial_count)
+
+    st.caption("Refresh individual holdings using 🔄 to get latest data. "
+               "Exit signals are based on ATR Stop breach, Supertrend flip, and Stage analysis — not daily CPR changes.")
 
 # ── TAB: BACKTEST ──────────────────────────────────────────────────────────────
 def tab_backtest():
