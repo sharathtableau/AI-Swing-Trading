@@ -2239,12 +2239,13 @@ def main():
     # Load stock list once
     stocks_df = load_nse_stocks()
 
-    t0,t1,t2,t3,t4 = st.tabs(["🔍 Analyse","📊 Screener","👁 Watchlist","💼 Portfolio","📈 Backtest"])
+    t0,t1,t2,t3,t4,t5 = st.tabs(["🔍 Analyse","📊 Screener","👁 Watchlist","📦 Holdings","💼 Portfolio","📈 Backtest"])
     with t0: tab_analyse(stocks_df, capital)
     with t1: tab_screener(stocks_df)
     with t2: tab_watchlist()
-    with t3: tab_portfolio(capital, risk_pct, tg_token, tg_chat)
-    with t4: tab_backtest()
+    with t3: tab_holdings()
+    with t4: tab_portfolio(capital, risk_pct, tg_token, tg_chat)
+    with t5: tab_backtest()
 
 if __name__ == "__main__":
     main()
