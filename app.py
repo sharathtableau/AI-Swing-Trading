@@ -1305,7 +1305,6 @@ def get_hold_exit_signal(sd: dict, entry_price: float) -> dict:
     """
     cmp        = sd.get("cmp", entry_price)
     tr         = sd.get("trade", {})
-    atr_stop   = tr.get("sl", 0)
     t1         = tr.get("t1", 0)
     t2         = tr.get("t2", 0)
     t3         = tr.get("t3", 0)
@@ -1314,6 +1313,25 @@ def get_hold_exit_signal(sd: dict, entry_price: float) -> dict:
     st_detail  = sd.get("details", {}).get("supertrend", {})
     st_bull    = st_detail.get("value", "Bullish") == "Bullish"
     pnl_pct    = (cmp - entry_price) / max(entry_price, 0.01) * 100
+
+    # ── ATR stop anchored to ACTUAL entry price (not score's hypothetical entry)
+    # tr["sl"] is calculated from score's hypothetical entry (can be above CMP
+    # for WATCHLIST stocks whose entry = breakout trigger). Always rebase to real entry.
+    atr_val  = tr.get("atr", 0)
+    adr_val  = tr.get("adr", 0)
+    if atr_val > 0:
+        atr_stop = round(entry_price - 1.5 * atr_val, 2)
+    elif adr_val > 0:
+        atr_stop = round(entry_price - adr_val, 2)
+    else:
+        atr_stop = round(entry_price * 0.93, 2)       # 7% hard-stop fallback
+
+    # Re-derive targets from actual entry price using same ADR/MDR ratios
+    adr = adr_val or atr_val or (entry_price * 0.01)
+    mdr = tr.get("mdr", adr * 1.5)
+    if t1 == 0:  t1 = round(entry_price + 0.75 * mdr, 2)
+    if t2 == 0:  t2 = round(entry_price + 1.00 * mdr, 2)
+    if t3 == 0:  t3 = round(entry_price + 1.50 * mdr, 2)
 
     # ── Priority 1: Hard stop hit ─────────────────────────────────────────────
     if atr_stop > 0 and cmp < atr_stop:
