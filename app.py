@@ -92,8 +92,14 @@ section[data-testid="stSidebar"] .stAlert p{{color:#111 !important;}}
 
 /* ── Global widgets ─────────────────────────────────────────────────────── */
 div[data-baseweb="select"]>div{{background:{C['card']} !important;border-color:{C['border']} !important;color:{C['text']} !important;}}
+div[data-baseweb="select"] span{{color:{C['text']} !important;}}
+div[data-baseweb="select"] input{{color:{C['text']} !important;background:transparent !important;}}
 div[data-baseweb="popover"] li{{background:{C['card']} !important;color:{C['text']} !important;}}
+div[data-baseweb="popover"] li span{{color:{C['text']} !important;}}
 div[data-baseweb="popover"] li:hover{{background:{C['border']} !important;}}
+div[data-baseweb="popover"] li:hover span{{color:{C['text']} !important;}}
+[data-baseweb="option"]{{color:{C['text']} !important;background:{C['card']} !important;}}
+[aria-selected="true"][data-baseweb="option"]{{background:{C['border2']} !important;}}
 .stButton>button{{background:{C['blue']} !important;color:white !important;border:none !important;border-radius:8px !important;font-family:'DM Sans',sans-serif !important;font-weight:500 !important;height:42px !important;}}
 .stButton>button:hover{{background:#3451db !important;}}
 div[data-testid="stMetricValue"]{{font-size:20px;font-weight:700;color:{C['text']};}}
@@ -1483,11 +1489,20 @@ def render_sidebar():
 # ── TAB: ANALYSE ───────────────────────────────────────────────────────────────
 def tab_analyse(stocks_df, capital):
     options = [""] + stocks_df["display"].tolist()
-    col_s, col_b = st.columns([5,1])
+    # Clear button resets the selectbox via session state
+    if st.session_state.get("_do_clear_search"):
+        st.session_state["stock_sel"] = ""
+        st.session_state["_do_clear_search"] = False
+    col_s, col_x, col_b = st.columns([4.6, 0.4, 1])
     with col_s:
         chosen = st.selectbox("stock_search", options=options, index=0,
             placeholder="Type symbol or company name  (e.g. RELIANCE, HDFC Bank, TCS...)",
-            label_visibility="collapsed")
+            label_visibility="collapsed", key="stock_sel")
+    with col_x:
+        if st.button("✕", key="clear_sel", help="Clear search",
+                     use_container_width=True):
+            st.session_state["_do_clear_search"] = True
+            st.rerun()
     with col_b:
         st.button("Analyse", use_container_width=True, key="go_analyse")
 
