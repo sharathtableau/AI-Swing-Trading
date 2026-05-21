@@ -1333,9 +1333,11 @@ def get_hold_exit_signal(sd: dict, entry_price: float) -> dict:
     if t2 == 0:  t2 = round(entry_price + 1.00 * mdr, 2)
     if t3 == 0:  t3 = round(entry_price + 1.50 * mdr, 2)
 
+    _base = {"atr_stop": atr_stop, "t1": t1, "t2": t2, "t3": t3}
+    _base = {"atr_stop": atr_stop, "t1": t1, "t2": t2, "t3": t3}
     # ── Priority 1: Hard stop hit ─────────────────────────────────────────────
     if atr_stop > 0 and cmp < atr_stop:
-        return {
+        return {**_base,
             "signal": "EXIT NOW", "color": C["red"], "urgency": "high",
             "reason": f"Stop Loss breached — CMP ₹{cmp:,.2f} < ATR Stop ₹{atr_stop:,.2f}",
             "action": "Exit full position immediately. Loss-limiting — no exceptions.",
@@ -1343,7 +1345,7 @@ def get_hold_exit_signal(sd: dict, entry_price: float) -> dict:
 
     # ── Priority 2: Supertrend flipped bearish ────────────────────────────────
     if not st_bull:
-        return {
+        return {**_base,
             "signal": "EXIT NOW", "color": C["red"], "urgency": "high",
             "reason": "Supertrend flipped Bearish — short-term trend reversed",
             "action": f"Exit if SL at ₹{atr_stop:,.2f} not already triggered. Don't wait.",
@@ -1351,13 +1353,13 @@ def get_hold_exit_signal(sd: dict, entry_price: float) -> dict:
 
     # ── Priority 3: Stage deterioration ──────────────────────────────────────
     if stage == "4":
-        return {
+        return {**_base,
             "signal": "EXIT", "color": C["red"], "urgency": "high",
             "reason": "Stock entered Stage 4 — declining phase, institutional selling",
             "action": "Exit position. Stage 4 can persist for months.",
         }
     if stage == "3":
-        return {
+        return {**_base,
             "signal": "CAUTION", "color": C["amber"], "urgency": "medium",
             "reason": "Stage 3 — distribution / topping pattern detected",
             "action": f"Tighten stop to ₹{atr_stop:,.2f}. Exit if price breaks below.",
@@ -1365,7 +1367,7 @@ def get_hold_exit_signal(sd: dict, entry_price: float) -> dict:
 
     # ── Priority 4: T2 hit — trail stop, ride T3 ─────────────────────────────
     if t2 > 0 and cmp >= t2:
-        return {
+        return {**_base,
             "signal": "HOLD", "color": C["green"], "urgency": "low",
             "reason": f"T2 ₹{t2:,.2f} hit (+{((t2-entry_price)/entry_price*100):.1f}%) ✓ — trade is running",
             "action": f"Trail stop to T1 ₹{t1:,.2f}. Target T3 ₹{t3:,.2f}. Let the runner ride.",
@@ -1373,7 +1375,7 @@ def get_hold_exit_signal(sd: dict, entry_price: float) -> dict:
 
     # ── Priority 5: T1 hit — book partial, make trade free ────────────────────
     if t1 > 0 and cmp >= t1:
-        return {
+        return {**_base,
             "signal": "BOOK PARTIAL", "color": C["blue"], "urgency": "low",
             "reason": f"T1 ₹{t1:,.2f} hit (+{((t1-entry_price)/entry_price*100):.1f}%) ✓ — first target reached",
             "action": f"Book 70% of position. Move SL to entry ₹{entry_price:,.2f} (free trade). Hold 30% for T2 ₹{t2:,.2f}.",
@@ -1381,7 +1383,7 @@ def get_hold_exit_signal(sd: dict, entry_price: float) -> dict:
 
     # ── Priority 6: Score deteriorated badly ──────────────────────────────────
     if total < 45:
-        return {
+        return {**_base,
             "signal": "CAUTION", "color": C["amber"], "urgency": "medium",
             "reason": f"Score dropped to {total}/100 — momentum weakening",
             "action": f"Watch closely. Exit if CMP closes below ₹{atr_stop:,.2f}.",
@@ -2375,6 +2377,8 @@ def tab_holdings():
         sig_color  = sig["color"]
         reason     = sig["reason"]
         action     = sig["action"]
+        atr_stop   = sig.get("atr_stop", 0)
+        tgt1       = sig.get("t1", 0)
 
         # Count for summary
         if signal == "HOLD":             hold_count    += 1
@@ -2396,9 +2400,11 @@ def tab_holdings():
                         f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>{company[:20]}</div>",
                         unsafe_allow_html=True)
         with h2:
+            sl_color = C["red"] if atr_stop > 0 and cmp < atr_stop * 1.03 else C["muted"]
             st.markdown(f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Entry</div>"
                         f"<div style='font-family:JetBrains Mono,monospace;font-size:13px;color:{C['text']}'>₹{entry_px:,.2f}</div>"
-                        f"<div style='font-size:10px;color:{C['dim']};font-family:DM Sans'>{qty} shares · {entry_date}</div>",
+                        f"<div style='font-size:10px;color:{sl_color};font-family:DM Sans'>"
+                        f"SL ₹{atr_stop:,.2f}</div>",
                         unsafe_allow_html=True)
         with h3:
             st.markdown(f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>CMP</div>"
@@ -2406,10 +2412,12 @@ def tab_holdings():
                         f"<div style='font-size:11px;font-weight:600;color:{pnl_color};font-family:JetBrains Mono'>{pnl_sign}{pnl_pct:.1f}%</div>",
                         unsafe_allow_html=True)
         with h4:
+            tgt1_pct = round((tgt1 - entry_px) / max(entry_px, 0.01) * 100, 1) if tgt1 else 0
             st.markdown(f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>P&L</div>"
                         f"<div style='font-family:JetBrains Mono,monospace;font-size:13px;color:{pnl_color}'>"
                         f"{pnl_sign}₹{abs(pnl):,.0f}</div>"
-                        f"<div style='font-size:10px;color:{C['dim']};font-family:DM Sans'>Score: {sd['total']}/100</div>",
+                        f"<div style='font-size:10px;color:{C['green']};font-family:DM Sans'>"
+                        f"T1 ₹{tgt1:,.2f} (+{tgt1_pct:.1f}%)</div>",
                         unsafe_allow_html=True)
         with h5:
             st.markdown(
