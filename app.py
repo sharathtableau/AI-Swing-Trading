@@ -2337,65 +2337,9 @@ def tab_holdings():
         </div>""", unsafe_allow_html=True)
         return
 
-    # ── Pre-pass: compute portfolio totals from cached data ──────────────────
+    # Placeholder at top — filled with real totals after card loop
+    _summary_slot = st.empty()
     total_invested = 0.0; total_current_value = 0.0
-    for _h in holdings:
-        _ep  = float(_h.get("entry_price", 0))
-        _qty = int(_h.get("qty", 1))
-        _cd  = st.session_state.get(f"hld_sd_{_h['symbol']}")
-        _cmp = _cd[0].get("cmp", _ep) if _cd else _ep
-        total_invested      += _ep  * _qty
-        total_current_value += _cmp * _qty
-
-    _tot_pnl     = total_current_value - total_invested
-    _tot_pnl_pct = (_tot_pnl / max(total_invested, 0.01)) * 100
-    _pnl_clr     = C["green"] if _tot_pnl >= 0 else C["red"]
-    _pnl_arrow   = "▲" if _tot_pnl >= 0 else "▼"
-    _pnl_sign    = "+" if _tot_pnl >= 0 else ""
-    _n           = len(holdings)
-
-    # ── Portfolio summary banner ──────────────────────────────────────────────
-    st.markdown(
-        f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans;"
-        f"text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px'>"
-        f"Portfolio Summary &nbsp;·&nbsp; {_n} stock{'s' if _n!=1 else ''}</div>",
-        unsafe_allow_html=True)
-    ps1, ps2, ps3, ps4 = st.columns(4)
-    _card = (
-        "background:{bg};border:1px solid {bd};border-radius:10px;"
-        "padding:14px 18px;margin-bottom:14px"
-    )
-    with ps1:
-        st.markdown(
-            f"<div style='{_card.format(bg=C['card'],bd=C['border'])}'>"
-            f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Invested</div>"
-            f"<div style='font-size:20px;font-weight:700;color:{C['text']};"
-            f"font-family:JetBrains Mono,monospace;margin-top:2px'>₹{total_invested:,.0f}</div>"
-            f"</div>", unsafe_allow_html=True)
-    with ps2:
-        st.markdown(
-            f"<div style='{_card.format(bg=C['card'],bd=C['border'])}'>"
-            f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Current Value</div>"
-            f"<div style='font-size:20px;font-weight:700;color:{C['text']};"
-            f"font-family:JetBrains Mono,monospace;margin-top:2px'>₹{total_current_value:,.0f}</div>"
-            f"</div>", unsafe_allow_html=True)
-    with ps3:
-        st.markdown(
-            f"<div style='{_card.format(bg=C['card'],bd=C['border'])}'>"
-            f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Overall P&amp;L</div>"
-            f"<div style='font-size:20px;font-weight:700;color:{_pnl_clr};"
-            f"font-family:JetBrains Mono,monospace;margin-top:2px'>"
-            f"{_pnl_sign}₹{abs(_tot_pnl):,.0f}</div>"
-            f"</div>", unsafe_allow_html=True)
-    with ps4:
-        st.markdown(
-            f"<div style='{_card.format(bg=C['card'],bd=C['border'])}'>"
-            f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Returns</div>"
-            f"<div style='font-size:20px;font-weight:700;color:{_pnl_clr};"
-            f"font-family:JetBrains Mono,monospace;margin-top:2px'>"
-            f"{_pnl_arrow} {abs(_tot_pnl_pct):.2f}%</div>"
-            f"</div>", unsafe_allow_html=True)
-
     hold_count = 0; exit_count = 0; caution_count = 0; partial_count = 0
 
     # ── Per-holding cards ─────────────────────────────────────────────────────
@@ -2429,6 +2373,10 @@ def tab_holdings():
         pnl_pct    = (cmp - entry_px) / max(entry_px, 0.01) * 100
         pnl_color  = C["green"] if pnl >= 0 else C["red"]
         pnl_sign   = "+" if pnl >= 0 else ""
+
+        # Accumulate real portfolio totals using live CMP
+        total_invested      += entry_px * qty
+        total_current_value += cmp * qty
 
         sig        = get_hold_exit_signal(sd, entry_px)
         signal     = sig["signal"]
@@ -2497,6 +2445,46 @@ def tab_holdings():
                 st.rerun()
 
         st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── Fill portfolio summary at top with real post-loop totals ─────────────
+    _tot_pnl     = total_current_value - total_invested
+    _tot_pnl_pct = (_tot_pnl / max(total_invested, 0.01)) * 100
+    _pnl_clr     = C["green"] if _tot_pnl >= 0 else C["red"]
+    _pnl_arrow   = "▲" if _tot_pnl >= 0 else "▼"
+    _pnl_sign    = "+" if _tot_pnl >= 0 else ""
+    _n           = len(holdings)
+    _card_s      = f"background:{C['card']};border:1px solid {C['border']};border-radius:10px;padding:14px 18px;margin-bottom:14px"
+    with _summary_slot.container():
+        st.markdown(
+            f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans;"
+            f"text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px'>"
+            f"Portfolio Summary &nbsp;·&nbsp; {_n} stock{'s' if _n!=1 else ''}</div>",
+            unsafe_allow_html=True)
+        ps1, ps2, ps3, ps4 = st.columns(4)
+        with ps1:
+            st.markdown(
+                f"<div style='{_card_s}'>"
+                f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Invested</div>"
+                f"<div style='font-size:20px;font-weight:700;color:{C['text']};font-family:JetBrains Mono,monospace;margin-top:2px'>"
+                f"₹{total_invested:,.0f}</div></div>", unsafe_allow_html=True)
+        with ps2:
+            st.markdown(
+                f"<div style='{_card_s}'>"
+                f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Current Value</div>"
+                f"<div style='font-size:20px;font-weight:700;color:{C['text']};font-family:JetBrains Mono,monospace;margin-top:2px'>"
+                f"₹{total_current_value:,.0f}</div></div>", unsafe_allow_html=True)
+        with ps3:
+            st.markdown(
+                f"<div style='{_card_s}'>"
+                f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Overall P&amp;L</div>"
+                f"<div style='font-size:20px;font-weight:700;color:{_pnl_clr};font-family:JetBrains Mono,monospace;margin-top:2px'>"
+                f"{_pnl_sign}₹{abs(_tot_pnl):,.0f}</div></div>", unsafe_allow_html=True)
+        with ps4:
+            st.markdown(
+                f"<div style='{_card_s}'>"
+                f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Returns</div>"
+                f"<div style='font-size:20px;font-weight:700;color:{_pnl_clr};font-family:JetBrains Mono,monospace;margin-top:2px'>"
+                f"{_pnl_arrow} {abs(_tot_pnl_pct):.2f}%</div></div>", unsafe_allow_html=True)
 
     # ── Signal counts ──────────────────────────────────────────────────────────
     st.divider()
