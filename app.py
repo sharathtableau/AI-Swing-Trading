@@ -1234,18 +1234,36 @@ def remove_from_watchlist(symbol: str):
 HOLDINGS_FILE = os.path.join(os.path.dirname(__file__), "holdings.json")
 
 def load_holdings() -> list:
+    # Tier 0: session-state cache (fast, survives reruns in same session)
+    if st.session_state.get("_holdings_loaded"):
+        return st.session_state.get("_holdings", [])
+
     sb = _get_supabase()
     if sb:
         try:
             rows = sb.table("holdings").select("*").execute().data
-            return rows if rows else []
-        except Exception:
-            pass
+            result = rows if rows else []
+            st.session_state["_holdings"]        = result
+            st.session_state["_holdings_loaded"] = True
+            st.session_state["_holdings_src"]    = "supabase"
+            return result
+        except Exception as e:
+            st.session_state["_holdings_src"] = f"supabase_error"
+    else:
+        st.session_state["_holdings_src"] = "no_supabase"
+
     try:
         with open(HOLDINGS_FILE, "r") as f:
-            return json.load(f)
+            result = json.load(f)
+            st.session_state["_holdings"]        = result
+            st.session_state["_holdings_loaded"] = True
+            st.session_state["_holdings_src"]    = st.session_state.get("_holdings_src","") + "+file"
+            return result
     except Exception:
         pass
+
+    # Tier 3: session-state only (lost on page close or redeploy)
+    st.session_state["_holdings_loaded"] = True
     return st.session_state.get("_holdings", [])
 
 def save_holdings(hl: list):
@@ -1255,14 +1273,18 @@ def save_holdings(hl: list):
     except Exception:
         st.session_state["_holdings"] = hl
 
+def _invalidate_holdings_cache():
+    st.session_state.pop("_holdings_loaded", None)
+    st.session_state.pop("_holdings", None)
+
 def add_holding(symbol: str, company: str, entry_price: float, qty: int) -> bool:
+    _invalidate_holdings_cache()
     sb = _get_supabase()
     entry_date = datetime.now().strftime("%Y-%m-%d")
     if sb:
         try:
             existing = sb.table("holdings").select("symbol").eq("symbol", symbol).execute().data
             if existing:
-                # Update entry price and qty if re-adding
                 sb.table("holdings").update({
                     "entry_price": entry_price, "qty": qty, "entry_date": entry_date
                 }).eq("symbol", symbol).execute()
@@ -1275,13 +1297,14 @@ def add_holding(symbol: str, company: str, entry_price: float, qty: int) -> bool
         except Exception:
             pass
     hl = load_holdings()
-    hl = [h for h in hl if h["symbol"] != symbol]   # replace if exists
+    hl = [h for h in hl if h["symbol"] != symbol]
     hl.append({"symbol": symbol, "company": company,
                "entry_price": entry_price, "qty": qty, "entry_date": entry_date})
     save_holdings(hl)
     return True
 
 def remove_holding(symbol: str):
+    _invalidate_holdings_cache()
     sb = _get_supabase()
     if sb:
         try:
@@ -2324,9 +2347,20 @@ def tab_holdings():
     holdings = load_holdings()
     nifty_r  = fetch_nifty_3m_return()
 
+    _src = st.session_state.get("_holdings_src", "")
+    _using_supabase = _src == "supabase"
+
+    if not _using_supabase:
+        st.warning(
+            "⚠️ **Holdings are not saved persistently.** "
+            "Your data will be lost on every app redeploy. "
+            "To fix this, create a `holdings` table in your Supabase project and add "
+            "`SUPABASE_URL` + `SUPABASE_KEY` to Streamlit Secrets.",
+            icon=None)
+
     if not holdings:
         st.markdown(f"""
-        <div style='text-align:center;padding:60px 20px;background:{C['card']};
+        <div style='text-align:center;padding:40px 20px;background:{C['card']};
                     border:1px solid {C['border']};border-radius:12px;margin-top:1rem'>
             <div style='font-size:40px;margin-bottom:12px'>📦</div>
             <div style='font-size:18px;font-weight:600;color:{C['text']};margin-bottom:8px'>No holdings yet</div>
@@ -2334,6 +2368,22 @@ def tab_holdings():
                 Go to <b>Watchlist</b> → click <b>📥 Purchased</b> on any stock to track it here
             </div>
         </div>""", unsafe_allow_html=True)
+
+        st.markdown("#### ➕ Re-add a Holding Manually")
+        st.caption("Use this if your holdings were lost after a redeploy.")
+        ra1, ra2, ra3, ra4 = st.columns(4)
+        ra_sym   = ra1.text_input("NSE Symbol",    key="ra_sym",   placeholder="e.g. ADVAIT").upper().strip()
+        ra_entry = ra2.number_input("Entry Price ₹", key="ra_entry", min_value=0.01, value=100.0, step=0.5)
+        ra_qty   = ra3.number_input("Qty",           key="ra_qty",   min_value=1,    value=1,     step=1)
+        ra_co    = ra4.text_input("Company name",  key="ra_co",    placeholder="optional")
+        if st.button("💾 Save Holding", key="ra_save", type="primary"):
+            if ra_sym:
+                co = ra_co or ra_sym
+                add_holding(ra_sym, co, float(ra_entry), int(ra_qty))
+                st.success(f"Added {ra_sym} @ ₹{ra_entry:,.2f}")
+                st.rerun()
+            else:
+                st.error("Enter a symbol first.")
         return
 
     # Placeholder at top — filled with real totals after card loop
@@ -2599,12 +2649,11 @@ def _run_backtest(stocks: list, period: str = "2y") -> dict:
             "profit_factor":pf,"total_return":tot_ret,"cagr":cagr,"max_dd":max_dd,
             "sharpe":sharpe,"trades":all_trades,"equity":equity}
 
-# ── MAIN ──────────────────────────────────────────────────────────────────────────────────
+# ── MAIN ──────────────────────────────────────────────────────────────────────
 def main():
     _init_state()
     capital, risk_pct, max_pos, max_sl_pct, tg_token, tg_chat = render_sidebar()
 
-    # Header
     st.markdown(f"""
 <div style="padding:1rem 0 0.5rem">
   <span style="font-family:'JetBrains Mono',monospace;font-size:22px;color:{C['blue']};font-weight:500">NSE</span>
@@ -2614,7 +2663,6 @@ def main():
   </p>
 </div>""", unsafe_allow_html=True)
 
-    # Market regime banner
     with st.spinner("Fetching Nifty 50..."):
         index_df = fetch_index()
     regime = get_regime(index_df)
@@ -2631,7 +2679,6 @@ def main():
         f"{'&nbsp;&nbsp;⚠️ <b>Capital Preservation Mode</b>' if regime['regime']=='Bearish' else ''}"
         f"</div>", unsafe_allow_html=True)
 
-    # Load stock list once
     stocks_df = load_nse_stocks()
 
     t0,t1,t2,t3,t4,t5 = st.tabs(["🔍 Analyse","📊 Screener","👁 Watchlist","📦 Holdings","💼 Portfolio","📈 Backtest"])
