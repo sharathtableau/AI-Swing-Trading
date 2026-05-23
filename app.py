@@ -1234,36 +1234,23 @@ def remove_from_watchlist(symbol: str):
 HOLDINGS_FILE = os.path.join(os.path.dirname(__file__), "holdings.json")
 
 def load_holdings() -> list:
-    # Tier 0: session-state cache (fast, survives reruns in same session)
-    if st.session_state.get("_holdings_loaded"):
-        return st.session_state.get("_holdings", [])
-
     sb = _get_supabase()
     if sb:
         try:
             rows = sb.table("holdings").select("*").execute().data
-            result = rows if rows else []
-            st.session_state["_holdings"]        = result
-            st.session_state["_holdings_loaded"] = True
-            st.session_state["_holdings_src"]    = "supabase"
-            return result
+            st.session_state["_holdings_src"] = "supabase"
+            return rows if rows else []
         except Exception as e:
-            st.session_state["_holdings_src"] = f"supabase_error"
+            st.session_state["_holdings_src"] = "supabase_error"
     else:
         st.session_state["_holdings_src"] = "no_supabase"
 
     try:
         with open(HOLDINGS_FILE, "r") as f:
-            result = json.load(f)
-            st.session_state["_holdings"]        = result
-            st.session_state["_holdings_loaded"] = True
-            st.session_state["_holdings_src"]    = st.session_state.get("_holdings_src","") + "+file"
-            return result
+            return json.load(f)
     except Exception:
         pass
 
-    # Tier 3: session-state only (lost on page close or redeploy)
-    st.session_state["_holdings_loaded"] = True
     return st.session_state.get("_holdings", [])
 
 def save_holdings(hl: list):
@@ -1273,12 +1260,7 @@ def save_holdings(hl: list):
     except Exception:
         st.session_state["_holdings"] = hl
 
-def _invalidate_holdings_cache():
-    st.session_state.pop("_holdings_loaded", None)
-    st.session_state.pop("_holdings", None)
-
 def add_holding(symbol: str, company: str, entry_price: float, qty: int) -> bool:
-    _invalidate_holdings_cache()
     sb = _get_supabase()
     entry_date = datetime.now().strftime("%Y-%m-%d")
     if sb:
@@ -1304,7 +1286,6 @@ def add_holding(symbol: str, company: str, entry_price: float, qty: int) -> bool
     return True
 
 def remove_holding(symbol: str):
-    _invalidate_holdings_cache()
     sb = _get_supabase()
     if sb:
         try:
@@ -2348,15 +2329,10 @@ def tab_holdings():
     nifty_r  = fetch_nifty_3m_return()
 
     _src = st.session_state.get("_holdings_src", "")
-    _using_supabase = _src == "supabase"
-
-    if not _using_supabase:
-        st.warning(
-            "⚠️ **Holdings are not saved persistently.** "
-            "Your data will be lost on every app redeploy. "
-            "To fix this, create a `holdings` table in your Supabase project and add "
-            "`SUPABASE_URL` + `SUPABASE_KEY` to Streamlit Secrets.",
-            icon=None)
+    if _src == "supabase_error":
+        st.warning("⚠️ Could not connect to Supabase — showing local data only. Check your SUPABASE_URL / SUPABASE_KEY secrets.")
+    elif _src == "no_supabase":
+        st.info("💡 No Supabase configured — holdings won't persist across reloads. Add SUPABASE_URL + SUPABASE_KEY in Streamlit Secrets.")
 
     if not holdings:
         st.markdown(f"""
