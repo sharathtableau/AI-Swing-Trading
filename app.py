@@ -2951,22 +2951,7 @@ def main():
                     "📦 Holdings", "💼 Portfolio", "🧪 Backtest"])
     t_analyse, t_screen, t_watch, t_hld, t_port, t_back = tabs
 
-    # Fetch shared Nifty 50 stocks list once
-    @st.cache_data(ttl=3600)
-    def _load_stocks():
-        try:
-            url = "https://archives.nseindia.com/content/indices/ind_nifty500list.csv"
-            df_idx = pd.read_csv(url)
-            syms = df_idx["Symbol"].dropna().astype(str).str.strip().tolist()
-            return syms[:200]
-        except Exception:
-            return ["RELIANCE","TCS","INFY","HDFCBANK","ICICIBANK","SBIN","HDFC",
-                    "KOTAKBANK","WIPRO","AXISBANK","LT","BAJFINANCE","ASIANPAINT",
-                    "MARUTI","SUNPHARMA","ULTRACEMCO","TITAN","NESTLEIND","POWERGRID",
-                    "NTPC","ONGC","TECHM","HCLTECH","INDUSINDBK","DRREDDY"]
-
-    stocks_list = _load_stocks()
-    stocks_df   = pd.DataFrame({"Symbol": stocks_list, "Company": stocks_list})
+    stocks_df = load_nse_stocks()
 
     with t_analyse: tab_analyse(stocks_df, capital)
     with t_screen:  tab_screener(stocks_df)
