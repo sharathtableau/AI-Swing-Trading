@@ -565,6 +565,139 @@ def compute_cpr(df: pd.DataFrame, live_price: float = 0.0) -> dict:
         return {}
 
 
+def detect_wyckoff_spring(df: pd.DataFrame, support: list) -> tuple:
+    """
+    Wyckoff Spring: price briefly punches BELOW a key support level (stop-hunt)
+    then closes back ABOVE it — high-conviction institutional absorption.
+
+    Returns (hit: bool, label: str, spring_low: float)
+    """
+    try:
+        if len(df) < 10 or not support:
+            return False, "", 0.0
+
+        # Use the nearest significant support below current price
+        cmp = float(df["close"].iloc[-1])
+        key_sups = sorted([s for s in support if s < cmp * 1.03], reverse=True)
+        if not key_sups:
+            return False, "", 0.0
+        key_s = key_sups[0]
+
+        # Look back up to 10 bars for the spring candle
+        lookback = df.tail(10)
+        for i in range(len(lookback) - 1, -1, -1):
+            row = lookback.iloc[i]
+            low_v   = float(row["low"])
+            close_v = float(row["close"])
+            high_v  = float(row["high"])
+
+            # Conditions:
+            # 1. Wick punched below support (false breakdown)
+            # 2. Candle closed back above support (recovery)
+            # 3. Close is in the upper 40% of the candle (bullish close)
+            # 4. Volume is not panic-dump level (vol_ratio < 4x — we want absorption, not capitulation)
+            candle_range = max(high_v - low_v, 0.01)
+            close_pct    = (close_v - low_v) / candle_range
+
+            if (low_v < key_s * 0.999 and
+                    close_v > key_s * 1.001 and
+                    close_pct >= 0.40):
+                # Extra check: volume should be elevated but not panic-extreme
+                vr = float(row.get("vol_ratio", 1.0)) if hasattr(row, "get") else 1.0
+                try:
+                    vr = float(lookback["vol_ratio"].iloc[i])
+                except Exception:
+                    vr = 1.0
+                if vr < 5.0:   # absorbed, not dumped
+                    spring_low = round(low_v, 2)
+                    bars_ago   = len(lookback) - 1 - i
+                    label = (f"Wyckoff Spring @ ₹{spring_low:,.2f} "
+                             f"({'today' if bars_ago == 0 else f'{bars_ago}d ago'}) — institutional stop-hunt absorbed")
+                    return True, label, spring_low
+
+        return False, "", 0.0
+    except Exception:
+        return False, "", 0.0
+
+
+def detect_volume_dryup(df: pd.DataFrame) -> tuple:
+    """
+    Volume Dry-Up (Float Lockup): 5-day avg volume drops below 50% of 20-day avg
+    AND price range stays tight (< 4% move over 5 days).
+
+    Strong hands have absorbed the float — spring-loaded for the next move.
+    Returns (hit: bool, label: str)
+    """
+    try:
+        if len(df) < 22:
+            return False, ""
+
+        vol_5d  = float(df["volume"].tail(5).mean())
+        vol_20d = float(df["volume"].tail(20).mean())
+        if vol_20d == 0:
+            return False, ""
+
+        vol_ratio = vol_5d / vol_20d
+
+        hi5 = float(df["high"].tail(5).max())
+        lo5 = float(df["low"].tail(5).min())
+        price_range_pct = (hi5 - lo5) / max(lo5, 0.01) * 100
+
+        if vol_ratio < 0.50 and price_range_pct < 4.0:
+            label = (f"Volume Dry-Up ✓ — 5d vol is {vol_ratio*100:.0f}% of norm, "
+                     f"price range {price_range_pct:.1f}% (float locked up)")
+            return True, label
+
+        return False, ""
+    except Exception:
+        return False, ""
+
+
+def detect_absorption(df: pd.DataFrame) -> tuple:
+    """
+    Institutional Absorption: high-volume DOWN bars where close is in the
+    upper 50% of the candle — sellers are hitting bids but price barely moves.
+    Institutions are silently absorbing every sell order.
+
+    Returns (hit: bool, label: str)
+    """
+    try:
+        if len(df) < 10:
+            return False, ""
+
+        lookback    = df.tail(10)
+        vol_20d_avg = float(df["volume"].tail(20).mean()) if len(df) >= 20 else float(df["volume"].mean())
+        if vol_20d_avg == 0:
+            return False, ""
+
+        absorb_count = 0
+        for i in range(len(lookback)):
+            row    = lookback.iloc[i]
+            open_v = float(row["open"])
+            close_v= float(row["close"])
+            high_v = float(row["high"])
+            low_v  = float(row["low"])
+            vol_v  = float(row["volume"])
+
+            candle_range = max(high_v - low_v, 0.01)
+            close_pct    = (close_v - low_v) / candle_range   # 0=wick bottom, 1=wick top
+
+            # Down bar (close < open), high volume (≥ 1.3x avg), closes in upper half
+            if (close_v < open_v and
+                    vol_v >= vol_20d_avg * 1.3 and
+                    close_pct >= 0.50):
+                absorb_count += 1
+
+        if absorb_count >= 2:
+            label = (f"Absorption Pattern ✓ — {absorb_count} high-vol down bars closing "
+                     f"in upper half over last 10 sessions (institutions absorbing supply)")
+            return True, label
+
+        return False, ""
+    except Exception:
+        return False, ""
+
+
 def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_entry: bool = True) -> dict:
     """
     is_entry=True  → full CPR gate applies (Analyse tab / Screener — deciding whether to buy)
@@ -686,6 +819,34 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
         "score":d_candle,"max":5,"status":"green" if d_candle>=3 else ("amber" if d_candle>0 else "red")}
     l3 = d_vol+d_vcp+d_candle
 
+    # ── Institutional Pattern Bonus (L3 extensions — capped at 25 total) ─────
+    spring_hit,  spring_label,  spring_low = detect_wyckoff_spring(df, support)
+    voldry_hit,  voldry_label              = detect_volume_dryup(df)
+    absorb_hit,  absorb_label              = detect_absorption(df)
+
+    if spring_hit:
+        l3 += 8
+        details["spring"] = {
+            "label": "Wyckoff Spring (Stop-Hunt Reversal)",
+            "value": spring_label,
+            "score": 8, "max": 8, "status": "green",
+        }
+    if voldry_hit:
+        l3 += 5
+        details["voldry"] = {
+            "label": "Volume Dry-Up (Float Lockup)",
+            "value": voldry_label,
+            "score": 5, "max": 5, "status": "green",
+        }
+    if absorb_hit:
+        l3 += 4
+        details["absorption"] = {
+            "label": "Absorption (Institutional Supply Absorption)",
+            "value": absorb_label,
+            "score": 4, "max": 4, "status": "green",
+        }
+    l3 = min(l3, 25)   # hard cap
+
     # ── CPR Filter Gate (Gomathi Shankar — trade confirmation layer) ──────────
     # 4 signal levels: CONFIRM → NEUTRAL → CAUTION → REJECT
     # Acts as a proper filter: REJECT downgrades verdict; CONFIRM adds score.
@@ -806,22 +967,77 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
     adr  = float(l["adr5"]) if not pd.isna(l.get("adr5",float("nan"))) else atr
     mdr  = float(l["mdr"])  if not pd.isna(l.get("mdr", float("nan"))) else atr*1.5
 
-    if verdict=="STRONG BUY":
-        near_s = sorted([s for s in support if s<cmp*0.998], reverse=True)
-        entry  = round(near_s[0]*1.002,2) if near_s and (cmp-near_s[0])/cmp<0.03 else round(cmp-0.5*adr,2)
-        elabel = "Entry (limit)"
-    elif verdict=="WATCHLIST":
-        triggers = sorted([r for r in resistance if r>cmp*1.003])
-        entry  = triggers[0] if triggers else round(cmp*1.02,2)
-        elabel = "Trigger (breakout)"
-    else:
-        entry  = round(cmp-0.5*adr,2); elabel="Entry (N/A)"
+    # ── Institutional entry logic ─────────────────────────────────────────────
+    # Institutions accumulate WITHIN the base near support/EMA, not at breakouts.
+    # Breakout chasing = retail trap. Smart money has already loaded before the move.
+    ema21_val = float(l.get("ema21", 0) or 0)
+    ema50_val = float(l.get("ema50", l.get("ma150", 0)) or 0)
+    bb_mid_v  = float(l.get("bb_mid", cmp) or cmp)
+    breakout_trigger = 0.0   # stored separately as confirmation level
 
-    sl = round(entry-0.5*adr,2)
-    t1 = round(entry+0.75*mdr,2)
-    t2 = round(entry+1.00*mdr,2)
-    t3 = round(entry+1.50*mdr,2)
-    rr = round((t1-entry)/max(entry-sl,0.01),2)
+    if verdict=="STRONG BUY":
+        # Wyckoff Spring on a STRONG BUY = highest-conviction institutional entry
+        if spring_hit and spring_low > 0:
+            entry  = round(spring_low * 1.001, 2)
+            elabel = "Entry (Wyckoff Spring — institutional demand confirmed)"
+        else:
+            # Price AT or just above support — enter on limit near demand zone
+            near_s = sorted([s for s in support if s < cmp*0.998], reverse=True)
+            entry  = round(near_s[0]*1.002, 2) if near_s and (cmp-near_s[0])/cmp < 0.04 else round(cmp-0.4*adr, 2)
+            elabel = "Entry (demand zone)"
+        triggers = sorted([r for r in resistance if r > cmp*1.003])
+        breakout_trigger = triggers[0] if triggers else round(cmp*1.03, 2)
+
+    elif verdict=="WATCHLIST":
+        # Wyckoff Spring = highest-conviction entry, overrides all other labels
+        if spring_hit and spring_low > 0:
+            entry  = round(spring_low * 1.001, 2)
+            elabel = "Accumulate (Wyckoff Spring — institutional stop-hunt zone)"
+        else:
+            # Institutional accumulation: build position INSIDE the base, NOT at breakout
+            # Priority 1 — Support within base (2–8% below CMP): institutional limit zone
+            base_sup = sorted([s for s in support if cmp*0.92 <= s <= cmp*0.999], reverse=True)
+            # Priority 2 — EMA21 pullback: institutions add at rising EMA21 (< CMP by 2%+)
+            ema21_pb = ema21_val if ema21_val > 0 and cmp > ema21_val*1.02 else 0
+            # Priority 3 — EMA50 pullback: deeper pullback accumulation
+            ema50_pb = ema50_val if ema50_val > 0 and cmp > ema50_val*1.02 and ema21_pb == 0 else 0
+            # Priority 4 — BB midline: fair-value accumulation when BB is contracting
+            bb_entry = bb_mid_v if bb_mid_v > 0 and cmp > bb_mid_v*1.015 else 0
+
+            if base_sup:
+                entry  = round(base_sup[0]*1.001, 2)
+                elabel = "Accumulate (near base support)"
+            elif ema21_pb > 0:
+                entry  = round(ema21_pb*1.001, 2)
+                elabel = "Accumulate (EMA21 pullback)"
+            elif ema50_pb > 0:
+                entry  = round(ema50_pb*1.001, 2)
+                elabel = "Accumulate (EMA50 pullback)"
+            elif bb_entry > 0:
+                entry  = round(bb_entry, 2)
+                elabel = "Accumulate (BB mid / fair value)"
+            else:
+                entry  = round(cmp - 0.35*adr, 2)
+                elabel = "Accumulate (slight pullback)"
+
+        # Breakout trigger = confirmation level (shown separately, NOT the entry)
+        triggers = sorted([r for r in resistance if r > cmp*1.003])
+        breakout_trigger = triggers[0] if triggers else round(cmp*1.02, 2)
+
+    else:
+        entry  = round(cmp-0.5*adr, 2); elabel = "Entry (N/A)"
+
+    # SL: below demand zone, not below entry — tighter institutional stop
+    if verdict in ("STRONG BUY","WATCHLIST") and entry > 0:
+        sl_sup = sorted([s for s in support if s < entry*0.999], reverse=True)
+        sl = round(sl_sup[0]*0.998, 2) if sl_sup and (entry-sl_sup[0])/entry < 0.06 else round(entry-0.4*adr, 2)
+    else:
+        sl = round(entry-0.5*adr, 2)
+
+    t1 = round(entry+0.75*mdr, 2)
+    t2 = round(entry+1.00*mdr, 2)
+    t3 = round(entry+1.50*mdr, 2)
+    rr = round((t1-entry)/max(entry-sl, 0.01), 2)
 
     bb_pct = float((l["close"]-l["bb_lower"])/max(l["bb_upper"]-l["bb_lower"],0.01)*100)
     return {
@@ -832,6 +1048,7 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
         "vcp":vcp_hit,"vcp_label":vcp_label,"cmp":cmp,
         "trade":{"entry":entry,"entry_label":elabel,"sl":sl,"t1":t1,"t2":t2,"t3":t3,"rr":rr,
                  "atr":round(atr,2),"adr":round(adr,2),"mdr":round(mdr,2),
+                 "breakout_trigger":round(breakout_trigger,2),
                  "scale1":round(entry*1.03,2),"scale2":round(entry*1.05,2),"scale3":round(entry*1.07,2)},
         "bb_pct":round(bb_pct,1),"rsi":rsi,"adx":adx_val,
         "rs_vs_nifty":round(rs_vs_nifty,1),"vol_ratio":vr,
@@ -839,6 +1056,9 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
         "cpr": cpr_data, "cpr_pts": cpr_pts,
         "cpr_signal": cpr_signal, "cpr_downgraded": cpr_downgraded,
         "cpr_reasons": cpr_reasons,
+        "spring_hit": spring_hit, "spring_label": spring_label, "spring_low": spring_low,
+        "voldry_hit": voldry_hit, "voldry_label": voldry_label,
+        "absorb_hit": absorb_hit, "absorb_label": absorb_label,
     }
 
 # ── CHART ──────────────────────────────────────────────────────────────────────
@@ -1615,9 +1835,13 @@ def tab_analyse(stocks_df, capital):
         st.markdown(f"<div style='margin-bottom:10px'>"
                     f"<span style='font-size:11px;font-family:DM Sans,sans-serif;color:{stage_col};font-weight:600'>"
                     f"{sd.get('stage_label','')}</span>&nbsp;&nbsp;{vcp_badge}</div>", unsafe_allow_html=True)
+        bt_line = ""
+        if sd["verdict"] == "WATCHLIST" and tr.get("breakout_trigger", 0) > 0:
+            bt_line = kpi_row("⚡ Breakout Confirm above", f"₹{tr['breakout_trigger']:,.2f}", C["amber"])
         trade_html = (kpi_row(tr["entry_label"],      f"₹{tr['entry']:,.2f}", entry_col) +
-                      kpi_row("ADR Stop (50% ADR)",   f"₹{tr['sl']:,.2f}",    C["red"]) +
-                      kpi_row("T1 — Normal Lite 70%", f"₹{tr['t1']:,.2f}",    C["green"]) +
+                      kpi_row("Stop Loss (below demand)", f"₹{tr['sl']:,.2f}", C["red"]) +
+                      bt_line +
+                      kpi_row("T1 — Book 70%",        f"₹{tr['t1']:,.2f}",    C["green"]) +
                       kpi_row("T2 — Normal 45%",      f"₹{tr['t2']:,.2f}",    "#00a86b") +
                       kpi_row("T3 — Runner",           f"₹{tr['t3']:,.2f}",    "#00a86b") +
                       kpi_row("R:R",                   f"{tr['rr']}x",         C["amber"]) +
@@ -2185,9 +2409,11 @@ def tab_watchlist():
                     f"CPR today: {_cpr2}</span></div>",
                     unsafe_allow_html=True)
                 st.markdown("<br>", unsafe_allow_html=True)
-                tc = [(tr2["entry_label"],f"₹{tr2['entry']:,.2f}",entry_c),("ADR Stop",f"₹{tr2['sl']:,.2f}",C["red"]),
-                      ("T1 (70%)",f"₹{tr2['t1']:,.2f}",C["green"]),("T2 (45%)",f"₹{tr2['t2']:,.2f}","#00a86b"),
-                      ("T3 Runner",f"₹{tr2['t3']:,.2f}","#00a86b"),("R:R",f"{tr2['rr']}x",C["amber"])]
+                tc = [(tr2["entry_label"],f"₹{tr2['entry']:,.2f}",entry_c),("SL (demand zone)",f"₹{tr2['sl']:,.2f}",C["red"])]
+                if sd2.get("verdict")=="WATCHLIST" and tr2.get("breakout_trigger",0)>0:
+                    tc.append((f"⚡ Breakout above",f"₹{tr2['breakout_trigger']:,.2f}",C["amber"]))
+                tc += [("T1 (70%)",f"₹{tr2['t1']:,.2f}",C["green"]),("T2 (45%)",f"₹{tr2['t2']:,.2f}","#00a86b"),
+                       ("T3 Runner",f"₹{tr2['t3']:,.2f}","#00a86b"),("R:R",f"{tr2['rr']}x",C["amber"])]
                 setup_html = "".join(f"<div style='flex:1;text-align:center;padding:8px 4px;background:{C['card']};"
                                      f"border:1px solid {C['border']};border-radius:8px;margin:0 3px'>"
                                      f"<div style='font-size:10px;color:{C['muted']};font-family:DM Sans'>{lbl}</div>"
@@ -2500,170 +2726,254 @@ def tab_holdings():
                 f"₹{total_current_value:,.0f}</div></div>", unsafe_allow_html=True)
         with ps3:
             st.markdown(
-                f"<div style='{_card_s}'>"
-                f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Overall P&amp;L</div>"
+                f"<div style='{_card_s};border-left:3px solid {_pnl_clr}'>"
+                f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Overall P&L</div>"
                 f"<div style='font-size:20px;font-weight:700;color:{_pnl_clr};font-family:JetBrains Mono,monospace;margin-top:2px'>"
                 f"{_pnl_sign}₹{abs(_tot_pnl):,.0f}</div></div>", unsafe_allow_html=True)
         with ps4:
             st.markdown(
-                f"<div style='{_card_s}'>"
+                f"<div style='{_card_s};border-left:3px solid {_pnl_clr}'>"
                 f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Returns</div>"
                 f"<div style='font-size:20px;font-weight:700;color:{_pnl_clr};font-family:JetBrains Mono,monospace;margin-top:2px'>"
-                f"{_pnl_arrow} {abs(_tot_pnl_pct):.2f}%</div></div>", unsafe_allow_html=True)
+                f"{_pnl_arrow}&nbsp;{abs(_tot_pnl_pct):.2f}%</div></div>", unsafe_allow_html=True)
 
-    # ── Signal counts ──────────────────────────────────────────────────────────
-    st.divider()
-    sc1,sc2,sc3,sc4 = st.columns(4)
-    sc1.metric("✅ Hold",         hold_count)
-    sc2.metric("🚨 Exit Signal",  exit_count,    delta="Action needed" if exit_count else None,
-               delta_color="inverse" if exit_count else "off")
-    sc3.metric("⚠️ Caution",      caution_count)
-    sc4.metric("📤 Book Partial", partial_count)
+    # Summary badge row
+    badge_items = []
+    if hold_count:    badge_items.append(f"<span style='color:{C['green']};font-weight:600'>● HOLD {hold_count}</span>")
+    if partial_count: badge_items.append(f"<span style='color:{C['amber']};font-weight:600'>◑ BOOK PARTIAL {partial_count}</span>")
+    if caution_count: badge_items.append(f"<span style='color:{C['amber']};font-weight:600'>⚠ CAUTION {caution_count}</span>")
+    if exit_count:    badge_items.append(f"<span style='color:{C['red']};font-weight:600'>✕ EXIT {exit_count}</span>")
+    if badge_items:
+        st.markdown(
+            "<div style='display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px'>" +
+            "  ".join(badge_items) + "</div>",
+            unsafe_allow_html=True)
 
-    st.caption("Refresh individual holdings using 🔄 to get latest data. "
-               "Exit signals are based on ATR Stop breach, Supertrend flip, and Stage analysis — not daily CPR changes.")
+    with st.expander("➕ Add / Update Holding"):
+        a1, a2, a3, a4 = st.columns(4)
+        add_sym   = a1.text_input("NSE Symbol", key="add_hld_sym", placeholder="e.g. WIPRO").upper().strip()
+        add_entry = a2.number_input("Entry Price ₹", key="add_hld_entry", min_value=0.01, value=100.0, step=0.5)
+        add_qty   = a3.number_input("Qty", key="add_hld_qty", min_value=1, value=1, step=1)
+        add_co    = a4.text_input("Company", key="add_hld_co", placeholder="optional")
+        if st.button("💾 Save", key="add_hld_save", type="primary"):
+            if add_sym:
+                add_holding(add_sym, add_co or add_sym, float(add_entry), int(add_qty))
+                st.success(f"Saved {add_sym} @ ₹{add_entry:,.2f}"); st.rerun()
+            else:
+                st.error("Enter a symbol.")
+
 
 # ── TAB: BACKTEST ──────────────────────────────────────────────────────────────
 def tab_backtest():
-    st.subheader("📈 Strategy Backtest")
-    st.caption("Event-driven backtest. Entry at next day open, exits at Stop or T1.")
-    bc1,bc2,bc3 = st.columns(3)
-    bt_univ   = bc1.selectbox("Universe", list(SCREENER_LISTS.keys())[:4], key="bt_univ")
-    bt_limit  = bc2.number_input("Max stocks", value=30, min_value=5, max_value=150, step=5)
-    bt_period = bc3.selectbox("Period", ["1y","2y","3y"], index=1, key="bt_per")
+    st.markdown("### 🧪 Strategy Backtest")
+    st.caption("Walk-forward validation · 70% train / 30% test split · signals from full scoring engine")
+
+    with st.expander("ℹ️ How the backtest works", expanded=False):
+        st.markdown(
+            "- Signals are generated using the **same 3-layer scoring engine** (L1 Trend + L2 Momentum + L3 Setup).\n"
+            "- Entry is simulated at **next-day open** to avoid look-ahead bias.\n"
+            "- Exit on **ATR trailing stop** (2×ATR) or **T1 target** hit, whichever comes first.\n"
+            "- **Walk-forward split**: first 70% of dates = train, last 30% = test.\n"
+            "- Thresholds: CAGR > 15% · Win rate > 40% · Max drawdown < 25% · R:R ≥ 1:2"
+        )
+
+    bt_results = st.session_state.get("bt_results")
+
+    symbols_input = st.text_area(
+        "NSE Symbols (comma-separated)",
+        value="RELIANCE,TCS,INFY,HDFCBANK,ICICIBANK",
+        height=68,
+    )
+    bt_capital = st.number_input("Starting Capital (₹)", value=1_000_000, step=50_000)
+
     if st.button("▶ Run Backtest", type="primary"):
-        with st.spinner(f"Backtesting {bt_univ} ({bt_limit} stocks)…"):
-            res = _run_backtest(SCREENER_LISTS[bt_univ][:bt_limit], bt_period)
-        st.session_state.bt_results = res
-    if st.session_state.bt_results:
-        r = st.session_state.bt_results
-        if "error" in r: st.error(r["error"]); return
-        m1,m2,m3,m4,m5 = st.columns(5)
-        m1.metric("Total Trades",  r["total_trades"])
-        m2.metric("Win Rate",      f"{r['win_rate']:.1f}%")
-        m3.metric("Avg R:R Won",   f"{r['avg_rr']:.2f}")
-        m4.metric("Profit Factor", f"{r['profit_factor']:.2f}")
-        m5.metric("Total Return",  f"{r['total_return']:.1f}%")
-        m1b,m2b,m3b = st.columns(3)
-        m1b.metric("CAGR",         f"{r['cagr']:.1f}%")
-        m2b.metric("Max Drawdown", f"{r['max_dd']:.1f}%")
-        m3b.metric("Sharpe Ratio", f"{r['sharpe']:.2f}")
-        st.markdown("### Strategy Validation")
-        checks = [("Win Rate > 40%",r["win_rate"]>40),("Profit Factor > 1.5",r["profit_factor"]>1.5),
-                  ("Max Drawdown < 25%",r["max_dd"]<25),("Avg R:R (wins) > 1.5",r["avg_rr"]>1.5),("CAGR > 15%",r["cagr"]>15)]
-        for label,ok in checks:
-            (st.success if ok else st.error)(f"{'✓' if ok else '✗'}  {label}")
-        if r.get("equity"):
-            eq_df  = pd.DataFrame(r["equity"])
-            fig_eq = go.Figure(go.Scatter(x=list(range(len(eq_df))),y=eq_df["value"],
-                fill="tozeroy",line_color=C["green"],name="Portfolio Value"))
-            fig_eq.update_layout(title="Equity Curve",height=300,
-                plot_bgcolor=C["card"],paper_bgcolor=C["bg"],font_color="white",margin=dict(l=10,r=10,t=40,b=10))
-            st.plotly_chart(fig_eq)
-        if r.get("trades"):
-            st.markdown("### Last 30 Trades")
-            tdf = pd.DataFrame(r["trades"][-30:])
-            disp_cols = [c for c in ["symbol","setup","entry_date","exit_date","entry","exit","pnl_pct","reason"] if c in tdf.columns]
-            st.dataframe(tdf[disp_cols], use_container_width=True)
+        symbols = [s.strip().upper() for s in symbols_input.split(",") if s.strip()]
+        if not symbols:
+            st.error("Enter at least one symbol.")
+        else:
+            with st.spinner("Fetching data and running simulation…"):
+                stock_data = {}
+                errors = []
+                prog = st.progress(0)
+                for idx_s, sym in enumerate(symbols):
+                    try:
+                        df_s = fetch_ohlcv(sym)
+                        stock_data[sym] = add_indicators(df_s)
+                    except Exception as e:
+                        errors.append(f"{sym}: {e}")
+                    prog.progress((idx_s + 1) / len(symbols))
+                prog.empty()
 
-def _run_backtest(stocks: list, period: str = "2y") -> dict:
-    all_trades = []; equity = [{"trade":0,"value":1_000_000}]; cash = 1_000_000
-    for sym in stocks:
-        try:
-            df = fetch_ohlcv(sym, period=period)
-            ind = add_indicators(df)
-        except Exception: continue
-        if len(ind) < 200: continue
-        in_trade = False; entry_px = sl = target = 0.0
-        for i in range(150, len(ind)-1):
-            if in_trade:
-                low_  = float(ind["low"].iloc[i])
-                high_ = float(ind["high"].iloc[i])
-                if low_ <= sl:
-                    pnl_pct = round((sl-entry_px)/entry_px*100,2)
-                    all_trades.append({"symbol":sym,"setup":_setup_label,
-                        "entry_date":str(ind.index[_entry_i]),"exit_date":str(ind.index[i]),
-                        "entry":round(entry_px,2),"exit":round(sl,2),"pnl_pct":pnl_pct,"reason":"Stop Loss"})
-                    cash += sl*_shares; in_trade = False
-                elif high_ >= target:
-                    pnl_pct = round((target-entry_px)/entry_px*100,2)
-                    all_trades.append({"symbol":sym,"setup":_setup_label,
-                        "entry_date":str(ind.index[_entry_i]),"exit_date":str(ind.index[i]),
-                        "entry":round(entry_px,2),"exit":round(target,2),"pnl_pct":pnl_pct,"reason":"Target Hit"})
-                    cash += target*_shares; in_trade = False
-                continue
-            df_slice = ind.iloc[:i+1]
-            try:
-                sd_ = score(df_slice)
-                if sd_["verdict"] != "STRONG BUY": continue
-                tr_ = sd_["trade"]
-                entry_px = float(ind["open"].iloc[i+1])
-                sl = tr_["sl"]; target = tr_["t1"]
-                if entry_px<=sl or target<=entry_px: continue
-                risk_amt = 1_000_000*0.01
-                _shares  = max(1, int(risk_amt/(entry_px-sl)))
-                if _shares*entry_px > cash: continue
-                cash -= _shares*entry_px; in_trade = True
-                _setup_label = identify_setup_from_score(sd_)
-                _entry_i = i+1; equity.append({"trade":len(all_trades),"value":cash})
-            except Exception: continue
-    if not all_trades: return {"error":"No trades generated. Try a wider universe or longer period."}
-    pnls   = [t["pnl_pct"] for t in all_trades]
-    wins   = [p for p in pnls if p>0]; losses = [p for p in pnls if p<=0]
-    win_rate = len(wins)/len(pnls)*100 if pnls else 0
-    avg_rr   = abs(np.mean(wins)/np.mean(losses)) if wins and losses else 0
-    pf       = abs(sum(wins)/sum(losses)) if losses and sum(losses)!=0 else 99
-    tot_ret  = float(np.sum(pnls))
-    years    = {"1y":1,"2y":2,"3y":3}.get(period,2)
-    cagr     = ((1+tot_ret/100)**(1/years)-1)*100 if tot_ret>-100 else -99
-    cumul    = pd.Series([1.0]+[(1+p/100) for p in pnls]).cumprod()
-    roll_max = cumul.cummax()
-    max_dd   = float(abs(((cumul-roll_max)/roll_max).min()*100))
-    arr      = np.array(pnls)/100
-    sharpe   = float(np.mean(arr)/np.std(arr)*np.sqrt(252)) if np.std(arr)>0 else 0
-    return {"total_trades":len(all_trades),"win_rate":win_rate,"avg_rr":avg_rr,
-            "profit_factor":pf,"total_return":tot_ret,"cagr":cagr,"max_dd":max_dd,
-            "sharpe":sharpe,"trades":all_trades,"equity":equity}
+                if errors:
+                    st.warning("Could not load: " + ", ".join(errors))
 
-# ── MAIN ──────────────────────────────────────────────────────────────────────
+                if not stock_data:
+                    st.error("No data loaded — cannot run backtest.")
+                    return
+
+                try:
+                    nifty_df = fetch_ohlcv("^NSEI")
+                except Exception:
+                    nifty_df = list(stock_data.values())[0].copy()
+
+                # Simple internal backtest using scoring engine
+                all_trades = []
+                equity_curve = [bt_capital]
+                cash = bt_capital
+
+                for sym, df_bt in stock_data.items():
+                    if len(df_bt) < 60:
+                        continue
+                    split = int(len(df_bt) * 0.70)
+                    test_df = df_bt.iloc[split:].reset_index(drop=True)
+
+                    for i in range(5, len(test_df) - 5):
+                        row_df = test_df.iloc[:i+1]
+                        try:
+                            sd_bt = score(row_df, is_entry=True)
+                        except Exception:
+                            continue
+                        if sd_bt["verdict"] not in ("STRONG BUY", "WATCHLIST"):
+                            continue
+
+                        entry_i = i + 1
+                        if entry_i >= len(test_df):
+                            continue
+
+                        entry_p  = float(test_df.iloc[entry_i]["open"])
+                        sl_p     = sd_bt["trade"]["sl"]
+                        t1_p     = sd_bt["trade"]["t1"]
+                        atr_v    = sd_bt["trade"]["atr"]
+                        tsl      = entry_p - 2.0 * atr_v
+
+                        exit_p, exit_reason = entry_p, "End"
+                        for j in range(entry_i + 1, min(entry_i + 30, len(test_df))):
+                            c = float(test_df.iloc[j]["close"])
+                            h = float(test_df.iloc[j]["high"])
+                            l = float(test_df.iloc[j]["low"])
+                            tsl = max(tsl, c - 2.0 * atr_v)
+                            if l <= sl_p:
+                                exit_p = sl_p; exit_reason = "Stop Loss"; break
+                            if l <= tsl:
+                                exit_p = tsl; exit_reason = "Trail Stop"; break
+                            if h >= t1_p:
+                                exit_p = t1_p; exit_reason = "T1 Target"; break
+                        else:
+                            exit_p = float(test_df.iloc[min(entry_i+29, len(test_df)-1)]["close"])
+                            exit_reason = "Time Exit"
+
+                        shares   = max(1, int((cash * 0.10) / entry_p))
+                        pnl      = (exit_p - entry_p) * shares
+                        pnl_pct  = (exit_p - entry_p) / max(entry_p, 0.01) * 100
+                        cash    += pnl
+                        equity_curve.append(cash)
+
+                        all_trades.append({
+                            "symbol": sym, "entry": round(entry_p, 2), "exit": round(exit_p, 2),
+                            "pnl": round(pnl, 2), "pnl_pct": round(pnl_pct, 2),
+                            "exit_reason": exit_reason, "verdict": sd_bt["verdict"],
+                        })
+
+                if not all_trades:
+                    st.info("No signals triggered during the test period.")
+                    return
+
+                trades_df = pd.DataFrame(all_trades)
+                wins      = trades_df[trades_df["pnl"] > 0]
+                losses    = trades_df[trades_df["pnl"] <= 0]
+                win_rate  = len(wins) / len(trades_df) * 100
+                total_pnl = trades_df["pnl"].sum()
+                avg_win   = wins["pnl"].mean() if len(wins) else 0
+                avg_loss  = losses["pnl"].mean() if len(losses) else 0
+                rr_ratio  = abs(avg_win / avg_loss) if avg_loss != 0 else 0
+                max_dd    = 0.0
+                peak      = bt_capital
+                for eq in equity_curve:
+                    if eq > peak: peak = eq
+                    dd = (peak - eq) / peak * 100
+                    max_dd = max(max_dd, dd)
+
+                st.session_state["bt_results"] = {
+                    "trades": trades_df, "equity": equity_curve,
+                    "win_rate": win_rate, "total_pnl": total_pnl,
+                    "avg_win": avg_win, "avg_loss": avg_loss,
+                    "rr_ratio": rr_ratio, "max_dd": max_dd,
+                    "capital": bt_capital,
+                }
+                bt_results = st.session_state["bt_results"]
+
+    if bt_results:
+        st.divider()
+        m1, m2, m3, m4, m5 = st.columns(5)
+        m1.metric("Trades",       len(bt_results["trades"]))
+        m2.metric("Win Rate",     f"{bt_results['win_rate']:.1f}%",
+                  delta="✓ OK" if bt_results["win_rate"] >= 40 else "✗ Below 40%")
+        m3.metric("Total P&L",    f"₹{bt_results['total_pnl']:,.0f}")
+        m4.metric("R:R Ratio",    f"{bt_results['rr_ratio']:.2f}",
+                  delta="✓ OK" if bt_results["rr_ratio"] >= 2 else "✗ Below 2")
+        m5.metric("Max Drawdown", f"{bt_results['max_dd']:.1f}%",
+                  delta="✓ OK" if bt_results["max_dd"] <= 25 else "✗ Above 25%")
+
+        eq = bt_results["equity"]
+        if len(eq) > 1:
+            fig_eq = go.Figure()
+            fig_eq.add_trace(go.Scatter(
+                y=eq, mode="lines", name="Equity",
+                line=dict(color=C["green"], width=2),
+                fill="tozeroy", fillcolor=hex_rgba(C["green"], 0.1),
+            ))
+            fig_eq.update_layout(
+                title="Equity Curve", paper_bgcolor=C["bg"], plot_bgcolor=C["bg"],
+                font=dict(color=C["text"]), height=300, margin=dict(l=10, r=10, t=40, b=10),
+                xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
+            )
+            st.plotly_chart(fig_eq, key="bt_equity_chart")
+
+        st.markdown("#### Trade Log")
+        td_show = bt_results["trades"].copy()
+        td_show["pnl_pct"] = td_show["pnl_pct"].map(lambda x: f"{x:+.1f}%")
+        td_show["pnl"]     = td_show["pnl"].map(lambda x: f"₹{x:,.0f}")
+        st.dataframe(td_show, use_container_width=True)
+
+
+# ── MAIN APP ───────────────────────────────────────────────────────────────────
 def main():
     _init_state()
     capital, risk_pct, max_pos, max_sl_pct, tg_token, tg_chat = render_sidebar()
 
-    st.markdown(f"""
-<div style="padding:1rem 0 0.5rem">
-  <span style="font-family:'JetBrains Mono',monospace;font-size:22px;color:{C['blue']};font-weight:500">NSE</span>
-  <span style="font-family:'DM Sans',sans-serif;font-size:22px;color:{C['text']};font-weight:600"> Swing Trader</span>
-  <p style="color:{C['muted']};font-size:13px;margin:3px 0 0;font-family:'DM Sans',sans-serif">
-    3-layer swing score &middot; Live NSE data via Yahoo Finance &middot; 3-7 day setups
-  </p>
-</div>""", unsafe_allow_html=True)
-
-    with st.spinner("Fetching Nifty 50..."):
-        index_df = fetch_index()
-    regime = get_regime(index_df)
-    emoji = {"Bullish":"🟢","Neutral":"🟡","Bearish":"🔴"}.get(regime["regime"],"⚪")
-    color = regime["color"]
     st.markdown(
-        f"<div style='background:{hex_rgba(color,0.08)};border:1px solid {hex_rgba(color,0.4)};border-radius:8px;"
-        f"padding:10px 18px;margin-bottom:14px'>"
-        f"<span style='font-size:18px'>{emoji}</span>&nbsp;&nbsp;"
-        f"<strong>Market Regime: {regime['regime']}</strong>"
-        f"&nbsp;|&nbsp;Nifty: <b>{regime.get('close','—')}</b>"
-        f"&nbsp;|&nbsp;30W MA: <b>{regime.get('ma30w','—')}</b>"
-        f"&nbsp;|&nbsp;RSI: <b>{regime.get('rsi','—')}</b>"
-        f"{'&nbsp;&nbsp;⚠️ <b>Capital Preservation Mode</b>' if regime['regime']=='Bearish' else ''}"
-        f"</div>", unsafe_allow_html=True)
+        f"<h1 style='font-family:JetBrains Mono,monospace;font-size:22px;"
+        f"color:{C['text']};margin-bottom:4px'>📈 NSE Swing Trader</h1>",
+        unsafe_allow_html=True,
+    )
 
-    stocks_df = load_nse_stocks()
+    tabs = st.tabs(["🔍 Analyse", "📊 Screener", "⭐ Watchlist",
+                    "📦 Holdings", "💼 Portfolio", "🧪 Backtest"])
+    t_analyse, t_screen, t_watch, t_hld, t_port, t_back = tabs
 
-    t0,t1,t2,t3,t4,t5 = st.tabs(["🔍 Analyse","📊 Screener","👁 Watchlist","📦 Holdings","💼 Portfolio","📈 Backtest"])
-    with t0: tab_analyse(stocks_df, capital)
-    with t1: tab_screener(stocks_df)
-    with t2: tab_watchlist()
-    with t3: tab_holdings()
-    with t4: tab_portfolio(capital, risk_pct, tg_token, tg_chat)
-    with t5: tab_backtest()
+    # Fetch shared Nifty 50 stocks list once
+    @st.cache_data(ttl=3600)
+    def _load_stocks():
+        try:
+            url = "https://archives.nseindia.com/content/indices/ind_nifty500list.csv"
+            df_idx = pd.read_csv(url)
+            syms = df_idx["Symbol"].dropna().astype(str).str.strip().tolist()
+            return syms[:200]
+        except Exception:
+            return ["RELIANCE","TCS","INFY","HDFCBANK","ICICIBANK","SBIN","HDFC",
+                    "KOTAKBANK","WIPRO","AXISBANK","LT","BAJFINANCE","ASIANPAINT",
+                    "MARUTI","SUNPHARMA","ULTRACEMCO","TITAN","NESTLEIND","POWERGRID",
+                    "NTPC","ONGC","TECHM","HCLTECH","INDUSINDBK","DRREDDY"]
 
-if __name__ == "__main__":
-    main()
+    stocks_list = _load_stocks()
+    stocks_df   = pd.DataFrame({"Symbol": stocks_list, "Company": stocks_list})
+
+    with t_analyse: tab_analyse(stocks_df, capital)
+    with t_screen:  tab_screener(stocks_df)
+    with t_watch:   tab_watchlist()
+    with t_hld:     tab_holdings()
+    with t_port:    tab_portfolio(capital, risk_pct, tg_token, tg_chat)
+    with t_back:    tab_backtest()
+
+
+main()
