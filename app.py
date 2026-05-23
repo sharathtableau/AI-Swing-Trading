@@ -1524,7 +1524,7 @@ def tab_analyse(stocks_df, capital):
             st.session_state["_do_clear_search"] = True
             st.rerun()
     with col_b:
-        st.button("Analyse", use_container_width=True, key="go_analyse")
+        st.button("Analyse", key="go_analyse")
 
     if not chosen:
         st.markdown(f"""
@@ -1577,8 +1577,7 @@ def tab_analyse(stocks_df, capital):
 
     c1, c2, c3 = st.columns([1.1,1.4,1.3])
     with c1:
-        st.plotly_chart(make_gauge(sd["total"],sd["verdict"],sd["vcol"]),
-                        use_container_width=True, config={"displayModeBar":False})
+        st.plotly_chart(make_gauge(sd["total"],sd["verdict"],sd["vcol"]), config={"displayModeBar":False})
         if sd["capped"]:
             sc = sd.get("stage","?")
             cap_msg = (f"Stage {sc} — no long positions" if sc in ("3","4") else "Weak trend gate — score capped")
@@ -1650,7 +1649,7 @@ def tab_analyse(stocks_df, capital):
                 f"color:{C['muted']};text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px'>"
                 f"12-Month Chart · EMA 8/13/21/50 · 30W MA · Supertrend · Entry/SL/T1/T2/T3</p>",
                 unsafe_allow_html=True)
-    st.plotly_chart(make_chart(df_ind, sd, sym), use_container_width=True, config={"displayModeBar":True})
+    st.plotly_chart(make_chart(df_ind, sd, sym), config={"displayModeBar":True})
 
     # Signal grid
     st.markdown("<hr>", unsafe_allow_html=True)
@@ -1870,7 +1869,7 @@ def tab_analyse(stocks_df, capital):
     # Action buttons
     btn_c1, btn_c2, btn_c3 = st.columns([3,1,1])
     with btn_c2:
-        if st.button("+ Watchlist", use_container_width=True, key="add_wl_analyse"):
+        if st.button("+ Watchlist", key="add_wl_analyse"):
             if add_to_watchlist(sym, comp): st.success(f"{sym} added to Watchlist!")
             else: st.info(f"{sym} already in Watchlist.")
     with btn_c3:
@@ -2017,7 +2016,7 @@ def tab_screener(stocks_df):
                         xaxis=dict(tickangle=-30),
                         yaxis=dict(range=[0, 105])
                     )
-                    st.plotly_chart(fig_sec, use_container_width=True, key="sec_rot_chart")
+                    st.plotly_chart(fig_sec, key="sec_rot_chart")
 
         # ── Stage 1 Accumulation ───────────────────────────────────────────────
         if "Stage" in filtered.columns:
@@ -2193,7 +2192,7 @@ def tab_watchlist():
                 st.markdown(f"<div style='display:flex;gap:0;margin-bottom:12px'>{setup_html}</div>", unsafe_allow_html=True)
                 st.markdown(f"<p style='font-family:DM Sans,sans-serif;font-size:11px;color:{C['muted']};margin-bottom:4px'>"
                             f"Daily · 1 Year · EMA 8/13/21/50 · 30-Week MA · Entry/SL/T1/T2/T3</p>", unsafe_allow_html=True)
-                st.plotly_chart(make_chart(df2,sd2,s), use_container_width=True,
+                st.plotly_chart(make_chart(df2,sd2,s),
                                 config={"displayModeBar":True}, key=f"wl_chart_{s}")
                 sc_html = "".join(f"<div style='flex:1;text-align:center;padding:6px 4px;background:{C['card']};"
                                   f"border:1px solid {C['border']};border-radius:8px;margin:0 3px'>"
@@ -2534,7 +2533,7 @@ def tab_backtest():
                 fill="tozeroy",line_color=C["green"],name="Portfolio Value"))
             fig_eq.update_layout(title="Equity Curve",height=300,
                 plot_bgcolor=C["card"],paper_bgcolor=C["bg"],font_color="white",margin=dict(l=10,r=10,t=40,b=10))
-            st.plotly_chart(fig_eq, use_container_width=True)
+            st.plotly_chart(fig_eq)
         if r.get("trades"):
             st.markdown("### Last 30 Trades")
             tdf = pd.DataFrame(r["trades"][-30:])
