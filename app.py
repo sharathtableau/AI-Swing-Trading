@@ -1016,14 +1016,29 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
 
     # ── Strategy confluence filter (new entries only) ───────────────────────
     conf_downgraded = False
+    conf_downgrade_reason = ""
     if is_entry:
+        # Case 1: Heavy bearish confluence — 3+ sells with no buys
         if sell_count >= 3 and buy_count == 0:
             if verdict == "STRONG BUY":
                 verdict, vcol = "WATCHLIST", C["amber"]; conf_downgraded = True
+                conf_downgrade_reason = "3+ SELL signals, 0 BUY — daily structure bearish"
             elif verdict == "WATCHLIST":
                 verdict, vcol = "AVOID",     C["red"];   conf_downgraded = True
+                conf_downgrade_reason = "3+ SELL signals, 0 BUY — daily structure bearish"
+        # Case 2: Extreme bearish
         elif sell_count >= 4 and verdict == "STRONG BUY":
             verdict, vcol = "WATCHLIST", C["amber"]; conf_downgraded = True
+            conf_downgrade_reason = "4+ SELL signals — strong bearish consensus"
+        # Case 3: Mixed / conflicting — sells ≥ buys with at least 1 sell present
+        # Catches 1B/1S, 1B/2S, 2B/2S etc. — weekly may be bullish but daily is not confirming
+        elif sell_count > 0 and sell_count >= buy_count and verdict == "STRONG BUY":
+            verdict, vcol = "WATCHLIST", C["amber"]; conf_downgraded = True
+            conf_downgrade_reason = (
+                f"Mixed signals ({buy_count} BUY / {sell_count} SELL) — "
+                "weekly trend bullish but daily strategy confluence not confirming; "
+                "wait for daily breakout confirmation before entering"
+            )
 
     atr  = float(l["atr"])
     cmp  = float(l["close"])
@@ -1126,7 +1141,7 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
         "rs_vs_nifty":round(rs_vs_nifty,1),"vol_ratio":vr,
         "bb_width":round(float((l["bb_upper"]-l["bb_lower"])/l["bb_mid"]),4),
         "conf_pts": conf_pts, "buy_count": buy_count, "sell_count": sell_count,
-        "conf_downgraded": conf_downgraded, "strats": strats,
+        "conf_downgraded": conf_downgraded, "conf_downgrade_reason": conf_downgrade_reason, "strats": strats,
         "spring_hit": spring_hit, "spring_label": spring_label, "spring_low": spring_low,
         "voldry_hit": voldry_hit, "voldry_label": voldry_label,
         "absorb_hit": absorb_hit, "absorb_label": absorb_label,
@@ -1876,8 +1891,9 @@ def tab_analyse(stocks_df, capital):
             st.markdown(f"<p style='text-align:center;color:{C['red']};font-family:JetBrains Mono,monospace;"
                         f"font-size:11px;margin-top:-10px'>{cap_msg}</p>", unsafe_allow_html=True)
         if sd.get("conf_downgraded"):
-            st.markdown(f"<p style='text-align:center;color:{C['red']};font-family:JetBrains Mono,monospace;"
-                        f"font-size:11px;margin-top:2px'>⬇ Confluence downgraded verdict</p>", unsafe_allow_html=True)
+            _dr = sd.get("conf_downgrade_reason", "Daily strategy signals conflict with score")
+            st.markdown(f"<p style='text-align:center;color:{C['amber']};font-family:DM Sans,sans-serif;"
+                        f"font-size:11px;margin-top:2px'>⬇ Score downgraded · {_dr}</p>", unsafe_allow_html=True)
 
         # Score history sparkline
         hist_key  = f"score_hist_{sym}"
@@ -2017,10 +2033,35 @@ def tab_analyse(stocks_df, capital):
         sell_c  = sd.get("sell_count", 0)
         n_s     = len(strats_d)
         c_down  = sd.get("conf_downgraded", False)
-        agg_col = C["green"] if buy_c >= 3 else (C["amber"] if buy_c >= 2 else C["red"])
-        agg_ico = "✅" if buy_c >= 3 else ("🟡" if buy_c >= 2 else "🔴")
-        _dh     = (f"<div style='font-size:12px;color:{C['red']};margin-top:4px;font-family:DM Sans'>"
-                   f"⬇ Verdict downgraded — bearish strategy confluence</div>") if c_down else ""
+        _dr     = sd.get("conf_downgrade_reason", "")
+        # Colour and icon driven by net signal picture
+        if buy_c >= 3:
+            agg_col, agg_ico = C["green"], "✅"
+        elif buy_c >= 2 and sell_c == 0:
+            agg_col, agg_ico = C["green"], "🟢"
+        elif sell_c > 0 and sell_c >= buy_c:
+            agg_col, agg_ico = C["amber"], "⚠️"
+        elif buy_c >= 2:
+            agg_col, agg_ico = C["amber"], "🟡"
+        else:
+            agg_col, agg_ico = C["red"], "🔴"
+        # Consensus label
+        if buy_c >= 4:
+            _cons = "Strong agreement — high-conviction setup ✓"
+        elif buy_c >= 3:
+            _cons = "Good agreement — proceed with normal position size"
+        elif buy_c >= 2 and sell_c == 0:
+            _cons = "Partial agreement — valid setup, use smaller size"
+        elif sell_c > 0 and sell_c >= buy_c:
+            _cons = "⚠️ Mixed / conflicting signals — weekly & daily timeframes disagree; wait for daily confirmation"
+        elif sell_c >= 3:
+            _cons = "Bearish consensus — avoid long entries"
+        else:
+            _cons = "Weak confluence — insufficient signal agreement"
+        _dh = (f"<div style='font-size:11px;color:{C['amber']};margin-top:6px;font-family:DM Sans'>"
+               f"⬇ Verdict downgraded · {_dr}</div>") if c_down and _dr else (
+               f"<div style='font-size:11px;color:{C['amber']};margin-top:6px;font-family:DM Sans'>"
+               f"⬇ Verdict downgraded due to conflicting signals</div>") if c_down else ""
         st.markdown(
             f"<div style='background:{hex_rgba(agg_col,0.10)};border:2px solid {hex_rgba(agg_col,0.5)};"
             f"border-radius:12px;padding:14px 20px;margin-bottom:14px;display:flex;align-items:center;gap:16px'>"
@@ -2028,8 +2069,7 @@ def tab_analyse(stocks_df, capital):
             f"<div><div style='font-family:JetBrains Mono,monospace;font-size:18px;font-weight:700;color:{agg_col}'>"
             f"Strategy Confluence: {buy_c}/{n_s} BUY · {sell_c}/{n_s} SELL</div>"
             f"<div style='font-family:DM Sans,sans-serif;font-size:13px;color:{C['muted']};margin-top:2px'>"
-            f"{'Strong agreement — high-conviction setup ✓' if buy_c >= 4 else 'Partial agreement — review signals below' if buy_c >= 2 else 'Bearish consensus — avoid long entries'}"
-            f"</div>{_dh}</div></div>",
+            f"{_cons}</div>{_dh}</div></div>",
             unsafe_allow_html=True)
 
         st.markdown(
@@ -3151,48 +3191,45 @@ def tab_backtest(stocks_df):
 
                 # Contribution bar chart
                 _contrib = []
-                for _sc in _strat_cols_bt:
-                    _sname2 = _sc.replace("strat_","").replace("_"," ")
-                    _buy_pnl = td_show[td_show[_sc]=="BUY"]["pnl"].sum()
-                    _contrib.append({"Strategy": _sname2, "Total P&L on BUY trades": _buy_pnl})
-                _cf_df = pd.DataFrame(_contrib).sort_values("Total P&L on BUY trades", ascending=True)
-                _fig_attr = go.Figure(go.Bar(
-                    x=_cf_df["Total P&L on BUY trades"], y=_cf_df["Strategy"],
-                    orientation="h",
-                    marker_color=[C["green"] if v >= 0 else C["red"]
-                                  for v in _cf_df["Total P&L on BUY trades"]]))
-                _fig_attr.update_layout(
-                    paper_bgcolor=C["bg"], plot_bgcolor=C["bg"],
-                    font=dict(color=C["text"]), height=220,
-                    margin=dict(l=130,r=10,t=10,b=30),
-                    xaxis_title="Total P&L (₹)",
-                    yaxis=dict(tickfont=dict(size=11)))
-                st.plotly_chart(_fig_attr, config={"displayModeBar":False}, key="attr_chart")
+                for _sc in _attr_rows:
+                    _buy_wr_n  = float(_sc["BUY win rate"].split("%")[0])  if "%" in str(_sc["BUY win rate"])  else 0
+                    _sell_wr_n = float(_sc["SELL win rate"].split("%")[0]) if "%" in str(_sc["SELL win rate"]) else 0
+                    _contrib.append({"Strategy": _sc["Strategy"],
+                                     "BUY Win Rate": _buy_wr_n,
+                                     "SELL Win Rate": _sell_wr_n})
+                if _contrib:
+                    _df_c = pd.DataFrame(_contrib)
+                    _fig_attr = go.Figure()
+                    _fig_attr.add_trace(go.Bar(name="BUY Win Rate",
+                                               x=_df_c["Strategy"], y=_df_c["BUY Win Rate"],
+                                               marker_color=C["green"]))
+                    _fig_attr.add_trace(go.Bar(name="SELL Win Rate",
+                                               x=_df_c["Strategy"], y=_df_c["SELL Win Rate"],
+                                               marker_color=C["red"]))
+                    _fig_attr.update_layout(
+                        barmode="group", height=280,
+                        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                        font=dict(family="DM Sans", color=C["text"]),
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                        margin=dict(l=0, r=0, t=30, b=0),
+                        xaxis=dict(gridcolor=C["border"]),
+                        yaxis=dict(gridcolor=C["border"], title="Win Rate %", range=[0, 100]),
+                    )
+                    st.plotly_chart(_fig_attr, config={"displayModeBar": False}, key="attr_chart")
 
-
-# ── MAIN APP ───────────────────────────────────────────────────────────────────
+# ── MAIN ──────────────────────────────────────────────────────────────────────
 def main():
-    _init_state()
-    capital, risk_pct, max_pos, max_sl_pct, tg_token, tg_chat = render_sidebar()
-
-    st.markdown(
-        f"<h1 style='font-family:JetBrains Mono,monospace;font-size:22px;"
-        f"color:{C['text']};margin-bottom:4px'>📈 NSE Swing Trader</h1>",
-        unsafe_allow_html=True,
-    )
-
-    tabs = st.tabs(["🔍 Analyse", "📊 Screener", "⭐ Watchlist",
-                    "📦 Holdings", "💼 Portfolio", "🧪 Backtest"])
-    t_analyse, t_screen, t_watch, t_hld, t_port, t_back = tabs
-
     stocks_df = load_nse_stocks()
+    t_an, t_sc, t_wl, t_hd, t_pf, t_back = st.tabs([
+        "\U0001f50d Analyse", "\U0001f4ca Screener", "\u2b50 Watchlist",
+        "\U0001f4b0 Holdings", "\U0001f4c1 Portfolio", "\U0001f9ea Backtest",
+    ])
+    with t_an:   tab_analyse(stocks_df)
+    with t_sc:   tab_screener(stocks_df)
+    with t_wl:   tab_watchlist()
+    with t_hd:   tab_holdings()
+    with t_pf:   tab_portfolio()
+    with t_back: tab_backtest(stocks_df)
 
-    with t_analyse: tab_analyse(stocks_df, capital)
-    with t_screen:  tab_screener(stocks_df)
-    with t_watch:   tab_watchlist()
-    with t_hld:     tab_holdings()
-    with t_port:    tab_portfolio(capital, risk_pct, tg_token, tg_chat)
-    with t_back:    tab_backtest(stocks_df)
-
-
-main()
+if __name__ == "__main__":
+    main()
