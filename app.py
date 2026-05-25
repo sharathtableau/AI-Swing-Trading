@@ -1785,8 +1785,8 @@ def tab_analyse(stocks_df, capital):
             f"text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px'>"
             f"Individual Strategy Signals</p>", unsafe_allow_html=True)
 
-        sig_col_map = {{"BUY": C["green"], "SELL": C["red"], "NEUTRAL": C["amber"]}}
-        sig_ico_map = {{"BUY": "🟢", "SELL": "🔴", "NEUTRAL": "🟡"}}
+        sig_col_map = {"BUY": C["green"], "SELL": C["red"], "NEUTRAL": C["amber"]}
+        sig_ico_map = {"BUY": "🟢", "SELL": "🔴", "NEUTRAL": "🟡"}
         strat_cols  = st.columns(n_s)
         for ci, (sname, sdata) in enumerate(strats_d.items()):
             ss = sdata.get("signal","NEUTRAL"); sr = sdata.get("reason","")
@@ -1801,6 +1801,311 @@ def tab_analyse(stocks_df, capital):
                     f"<div style='font-size:10px;color:{C['text']};font-family:DM Sans;margin-top:5px'>{sr}</div>"
                     f"<div style='font-size:10px;color:{C['dim']};font-family:DM Sans;font-style:italic;margin-top:3px'>{srg}</div>"
                     f"</div>", unsafe_allow_html=True)
+
+
+# ── TAB: SCREENER ──────────────────────────────────────────────────────────────
+def tab_screener(stocks_df):
+    st.markdown(
+        f"<p style='font-family:DM Sans,sans-serif;font-size:13px;color:{C['muted']};margin-bottom:1rem'>"
+        f"Scan any basket of NSE stocks in parallel and rank by swing score. "
+        f"75+ = Strong Buy &nbsp;|&nbsp; 55–74 = Watchlist.</p>",
+        unsafe_allow_html=True)
+
+    all_nse = stocks_df["symbol"].tolist()
+    basket_options = list(SCREENER_LISTS.keys()) + ["All NSE Listed (~2000 stocks)"]
+    est_times = {"Nifty 50":"~1 min","Nifty Next 50":"~1 min","Nifty Midcap 150":"~2 min",
+                 "Nifty Smallcap":"~1 min","Nifty 100":"~2 min","All 300+":"~4 min",
+                 "All NSE Listed (~2000 stocks)":"~8–12 min"}
+
+    scr_c1,scr_c2,scr_c3,scr_c4 = st.columns([2,1,1,1])
+    with scr_c1: basket = st.selectbox("Basket", basket_options, key="scr_basket")
+    with scr_c2: min_score = st.number_input("Min score", min_value=0, max_value=100, value=55, step=5, key="scr_min")
+    with scr_c3: workers   = st.number_input("Workers",   min_value=5, max_value=30,  value=20, step=5, key="scr_workers")
+    with scr_c4:
+        st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+        buy_filter = st.checkbox("3+ BUY signals only", value=False, key="scr_buy_filter",
+                                 help="Show only stocks where 3 or more of the 5 strategies agree on BUY")
+
+    custom_input = st.text_input("Custom symbols (comma-separated)",
+                                 placeholder="e.g. ZOMATO, IRFC, SUZLON", key="scr_custom")
+
+    if basket == "All NSE Listed (~2000 stocks)":
+        n_stocks = len(all_nse)
+    else:
+        n_stocks = len(SCREENER_LISTS.get(basket, []))
+    est = est_times.get(basket, "~2 min")
+
+    c_run, c_clear = st.columns([1, 4])
+    run_btn   = c_run.button("🔍 Run Screener", type="primary", key="scr_run")
+    clear_btn = c_clear.button("✕ Clear", key="scr_clear")
+
+    if clear_btn:
+        st.session_state["scr_results"] = pd.DataFrame()
+
+    if run_btn:
+        if custom_input.strip():
+            syms = [s.strip().upper() for s in custom_input.split(",") if s.strip()]
+        elif basket == "All NSE Listed (~2000 stocks)":
+            syms = all_nse
+        else:
+            syms = SCREENER_LISTS.get(basket, [])
+
+        if not syms:
+            st.warning("No symbols to scan.")
+        else:
+            with st.spinner(f"Scanning {len(syms)} stocks ({est})…"):
+                df_res = run_screener(syms, workers=int(workers))
+            st.session_state["scr_results"] = df_res
+
+    filtered = st.session_state.get("scr_results", pd.DataFrame())
+    if not isinstance(filtered, pd.DataFrame):
+        filtered = pd.DataFrame()
+
+    if not filtered.empty:
+        filtered = filtered[filtered["Score"] >= min_score].copy()
+        if buy_filter and "Buy Signals" in filtered.columns:
+            filtered = filtered[filtered["Buy Signals"] >= 3].copy()
+
+        st.markdown(
+            f"<p style='font-family:DM Sans;font-size:13px;color:{C['muted']};"
+            f"margin-bottom:8px'><b>{len(filtered)}</b> stocks meet criteria.</p>",
+            unsafe_allow_html=True)
+
+        if filtered.empty:
+            st.info("No stocks match your filters.")
+            return
+
+        # Colour map for verdict
+        def _fmt_entry(row):
+            v = row.get("Verdict","")
+            return v
+
+        # Add watchlist column
+        wl_syms = {w["symbol"] for w in load_watchlist()}
+        filtered["WL"] = filtered["Symbol"].apply(lambda s: "✓" if s in wl_syms else "")
+
+        # Editable table with star column for bulk add
+        filtered["⭐"] = False
+        display_cols = ["⭐","Symbol","Verdict","Score","L1 Trend","L2 Momentum",
+                        "L3 Setup","CMP","Entry","SL","R:R","Buy Signals","Confluence","WL","Sector"]
+        avail_cols   = [c for c in display_cols if c in filtered.columns]
+        edited = st.data_editor(
+            filtered[avail_cols].reset_index(drop=True),
+            column_config={"⭐": st.column_config.CheckboxColumn("Add to WL", default=False)},
+            hide_index=True, key="scr_editor")
+
+        col_add, col_tg = st.columns([1, 3])
+        if col_add.button("⭐ Add selected to Watchlist", key="scr_add_wl"):
+            selected_syms = edited[edited["⭐"]]["Symbol"].tolist()
+            added = 0
+            for s in selected_syms:
+                if add_to_watchlist(s, s):
+                    added += 1
+            if added:
+                st.success(f"Added {added} stock(s) to Watchlist.")
+                st.rerun()
+
+        strong_buys = filtered[filtered["Verdict"] == "STRONG BUY"]["Symbol"].tolist()
+        if strong_buys and col_tg.button("📲 Alert Strong Buys via Telegram", key="scr_tg"):
+            tg_tok  = st.session_state.get("tg_tok",  "")
+            tg_chat = st.session_state.get("tg_chat", "")
+            if tg_tok and tg_chat:
+                msg = "📈 *Strong Buy Signals*\n" + "\n".join(
+                    f"• {r['Symbol']}: {r['Score']} pts — {r['Entry']}" for _, r in
+                    filtered[filtered["Verdict"]=="STRONG BUY"].iterrows())
+                _send_telegram(tg_tok, tg_chat, msg)
+                st.success("Telegram alert sent!")
+            else:
+                st.warning("Add Telegram token and chat ID in Settings.")
+
+        # Stage 1 high-probability view
+        with st.expander("🔬 Stage 1→2 Emerging (High Probability)"):
+            s1_disp = filtered[filtered["Stage"].str.contains("1→2|Base Break", na=False)]
+            if s1_disp.empty:
+                st.info("No Stage 1→2 breakouts in current scan.")
+            else:
+                st.dataframe(s1_disp[avail_cols].reset_index(drop=True), use_container_width=True)
+    elif not filtered.empty:
+        st.info("Run the screener to see results.")
+
+
+# ── TAB: WATCHLIST ─────────────────────────────────────────────────────────────
+def tab_watchlist():
+    wl = load_watchlist()
+
+    if not wl:
+        st.markdown(
+            f"<div style='text-align:center;padding:40px 20px;background:{C['card']};"
+            f"border:1px solid {C['border']};border-radius:12px;margin-top:1rem'>"
+            f"<div style='font-size:40px;margin-bottom:12px'>⭐</div>"
+            f"<div style='font-size:18px;font-weight:600;color:{C['text']};margin-bottom:8px'>Watchlist is empty</div>"
+            f"<div style='font-size:13px;color:{C['muted']}'>Analyse a stock and click <b>★ Add to Watchlist</b>, "
+            f"or use the Screener to bulk-add.</div></div>",
+            unsafe_allow_html=True)
+        return
+
+    nifty_r = fetch_nifty_3m_return()
+    c_ref, c_clr = st.columns([1, 5])
+    if c_ref.button("🔄 Refresh All", key="wl_refresh_all"):
+        for itm in wl:
+            for k in [f"wl_sd_{itm['symbol']}", f"wl_df_{itm['symbol']}"]:
+                st.session_state.pop(k, None)
+        st.rerun()
+    if c_clr.button("🗑 Clear Watchlist", key="wl_clear"):
+        save_watchlist([])
+        st.rerun()
+
+    for item in wl:
+        s        = item["symbol"]
+        cmp_name = item.get("company", s)
+
+        # Cache score per symbol
+        cache_key = f"wl_sd_{s}"
+        df_key    = f"wl_df_{s}"
+        if cache_key not in st.session_state:
+            try:
+                df_r = fetch_ohlcv(s)
+                df_i = add_indicators(df_r)
+                lp   = fetch_live_price(s).get("price", 0.0) or 0.0
+                st.session_state[cache_key] = score(df_i, nifty_ret=nifty_r, live_price=lp)
+                st.session_state[df_key]    = df_i
+            except Exception:
+                st.session_state[cache_key] = None
+
+        sd_w = st.session_state.get(cache_key)
+        if sd_w is None:
+            st.warning(f"Could not load {s}")
+            continue
+
+        v   = sd_w["verdict"]; vc = sd_w["vcol"]; tot = sd_w["total"]
+        cmp = sd_w["cmp"];     tr = sd_w["trade"]
+        bc  = sd_w.get("buy_count", 0); sc_cnt = sd_w.get("sell_count", 0)
+
+        # Card
+        st.markdown(
+            f"<div style='background:{C['card']};border:1.5px solid {hex_rgba(vc,0.5)};"
+            f"border-radius:12px;padding:14px 18px;margin-bottom:10px'>",
+            unsafe_allow_html=True)
+
+        h1, h2, h3, h4, h5 = st.columns([1.6, 1.2, 1.4, 2.0, 1.4])
+        with h1:
+            st.markdown(
+                f"<div style='font-family:JetBrains Mono,monospace;font-size:15px;"
+                f"font-weight:700;color:{C['text']}'>{s}</div>"
+                f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>{cmp_name[:22]}</div>",
+                unsafe_allow_html=True)
+        with h2:
+            st.markdown(
+                f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Score</div>"
+                f"<div style='font-family:JetBrains Mono,monospace;font-size:20px;"
+                f"font-weight:700;color:{vc}'>{tot}</div>"
+                f"<div style='font-size:11px;font-weight:600;color:{vc};font-family:DM Sans'>{v}</div>",
+                unsafe_allow_html=True)
+        with h3:
+            st.markdown(
+                f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>CMP / Entry</div>"
+                f"<div style='font-family:JetBrains Mono,monospace;font-size:13px;color:{C['text']}'>₹{cmp:,.2f}</div>"
+                f"<div style='font-size:11px;color:{C['blue']};font-family:DM Sans'>Entry ₹{tr['entry']:,.2f}</div>"
+                f"<div style='font-size:10px;color:{C['red']};font-family:DM Sans'>SL ₹{tr['sl']:,.2f}</div>",
+                unsafe_allow_html=True)
+        with h4:
+            conf_col = C["green"] if bc >= 3 else (C["amber"] if bc >= 2 else C["red"])
+            st.markdown(
+                f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Strategy Confluence</div>"
+                f"<div style='font-size:14px;font-weight:700;color:{conf_col};font-family:JetBrains Mono'>"
+                f"{bc}/5 BUY · {sc_cnt}/5 SELL</div>"
+                f"<div style='font-size:10px;color:{C['muted']};font-family:DM Sans;margin-top:2px'>"
+                f"T1 ₹{tr['t1']:,.2f}  ·  R:R {tr['rr']}x</div>",
+                unsafe_allow_html=True)
+        with h5:
+            if st.button("🔄", key=f"wl_ref_{s}", help="Refresh"):
+                st.session_state.pop(cache_key, None)
+                st.session_state.pop(df_key, None)
+                st.rerun()
+            if st.button("✕ Remove", key=f"wl_rm_{s}"):
+                remove_from_watchlist(s)
+                st.session_state.pop(cache_key, None)
+                st.rerun()
+            if st.button("📥 Purchased", key=f"wl_buy_{s}"):
+                st.session_state[f"wl_purchase_{s}"] = True
+
+        # Purchase form (inline)
+        if st.session_state.get(f"wl_purchase_{s}"):
+            pb1, pb2, pb3, pb4 = st.columns(4)
+            pu_entry = pb1.number_input("Entry ₹", key=f"pu_e_{s}", min_value=0.01,
+                                        value=float(tr["entry"]), step=0.5)
+            pu_qty   = pb2.number_input("Qty",     key=f"pu_q_{s}", min_value=1, value=1)
+            pu_co    = pb3.text_input("Company",   key=f"pu_c_{s}", value=cmp_name)
+            with pb4:
+                st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                if st.button("💾 Save", key=f"pu_sv_{s}", type="primary"):
+                    add_holding(s, pu_co or s, float(pu_entry), int(pu_qty))
+                    st.session_state.pop(f"wl_purchase_{s}", None)
+                    st.success(f"Added {s} to Holdings.")
+                    st.rerun()
+
+        # Expandable chart
+        with st.expander(f"📊 Chart & signals — {s}"):
+            df_w = st.session_state.get(df_key)
+            if df_w is not None:
+                # Setup pills
+                setup_list = []
+                if sd_w.get("vcp"):   setup_list.append(("VCP", C["green"]))
+                if sd_w.get("spring_hit"): setup_list.append(("Wyckoff Spring", C["green"]))
+                if sd_w.get("voldry_hit"): setup_list.append(("Vol Dry-Up", C["amber"]))
+                if sd_w.get("absorb_hit"): setup_list.append(("Absorption", C["amber"]))
+                bc2 = sd_w.get("buy_count", 0)
+                setup_list.append((f"Confluence {bc2}/5", C["green"] if bc2 >= 3 else C["amber"]))
+                sc_html = "".join(
+                    f"<span style='background:{hex_rgba(c,0.2)};color:{c};font-family:DM Sans;"
+                    f"font-size:11px;font-weight:600;padding:3px 8px;border-radius:12px;margin-right:6px'>{lb}</span>"
+                    for lb, c in setup_list)
+                st.markdown(
+                    f"<div style='display:flex;gap:0;margin-bottom:10px'>{sc_html}</div>",
+                    unsafe_allow_html=True)
+                st.plotly_chart(make_chart(df_w, sd_w, s),
+                                config={"displayModeBar": True}, key=f"wl_chart_{s}")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ── TAB: PORTFOLIO ─────────────────────────────────────────────────────────────
+def tab_portfolio(capital, risk_pct, tg_token, tg_chat):
+    port = st.session_state.portfolio
+    port["capital"] = capital
+
+    # Update live prices & ATR trailing stop
+    for sym, pos in port["positions"].items():
+        try:
+            live = fetch_live_price(sym)
+            cmp_ = live["price"] if live["price"] else pos["current_price"]
+        except Exception:
+            cmp_ = pos["current_price"]
+        pos["current_price"] = cmp_
+        try:
+            df_ = fetch_ohlcv(sym); ind_ = add_indicators(df_)
+            atr_ = float(ind_.iloc[-1]["atr"]) if len(ind_) > 0 else 0
+        except Exception:
+            atr_ = 0
+        if atr_ > 0:
+            new_tsl = round(cmp_ - 2.0*atr_, 2)
+            pos["trailing_sl"] = max(pos.get("trailing_sl", pos["stop_loss"]), new_tsl)
+        if cmp_ >= pos["target"] and not pos.get("free_trade"):
+            pos["trailing_sl"] = max(pos["trailing_sl"], pos["entry"])
+            pos["free_trade"] = True
+
+    invested  = sum(p["shares"]*p["current_price"] for p in port["positions"].values())
+    total_val = port["cash"] + invested
+    realized  = sum(t["pnl"] for t in port["closed_trades"])
+    unrealzd  = sum((p["current_price"]-p["entry"])*p["shares"] for p in port["positions"].values())
+
+    k1,k2,k3,k4,k5 = st.columns(5)
+    k1.metric("Total Value",  f"₹{total_val:,.0f}", delta=f"{((total_val-capital)/capital*100):+.1f}%")
+    k2.metric("Cash",         f"₹{port['cash']:,.0f}")
+    k3.metric("Invested",     f"₹{invested:,.0f}")
+    k4.metric("Unrealized",   f"₹{unrealzd:,.0f}", delta=f"₹{unrealzd:,.0f}")
+    k5.metric("Realized P&L", f"₹{realized:,.0f}")
+    st.divider()
 
     st.markdown("### Open Positions")
     if not port["positions"]:
@@ -1817,8 +2122,10 @@ def tab_analyse(stocks_df, capital):
             border = C["green"] if pnl>=0 else C["red"]
             st.markdown(f"<div style='border-left:4px solid {border};padding:0 0 0 12px;'>", unsafe_allow_html=True)
             c1,c2,c3,c4,c5,c6,c7 = st.columns([1.5,0.8,0.8,0.8,0.8,0.8,0.4])
-            c1.markdown(f"**{sym}**<br><small style='color:#aaa'>{pos.get('setup','')} {'🎯 FREE TRADE' if pos.get('free_trade') else ''}</small>",
-                        unsafe_allow_html=True)
+            c1.markdown(
+                f"**{sym}**<br><small style='color:#aaa'>{pos.get('setup','')} "
+                f"{'🎯 FREE TRADE' if pos.get('free_trade') else ''}</small>",
+                unsafe_allow_html=True)
             c2.metric("Entry",    f"₹{pos['entry']:.2f}")
             c3.metric("CMP",      f"₹{cmp_:.2f}", delta=f"{pnl_pct:+.1f}%")
             c4.metric("Trail SL", f"₹{pos['trailing_sl']:.2f}")
@@ -1827,11 +2134,13 @@ def tab_analyse(stocks_df, capital):
             if c7.button("✕", key=f"cp_{sym}"):
                 pnl_close = (cmp_-pos["entry"])*pos["shares"]
                 port["cash"] += cmp_*pos["shares"]
-                port["closed_trades"].append({**pos,"exit_price":cmp_,
+                port["closed_trades"].append({
+                    **pos, "exit_price":cmp_,
                     "exit_date":datetime.now().strftime("%Y-%m-%d"),
-                    "pnl":round(pnl_close,2),"pnl_pct":round(pnl_pct,2),"exit_reason":"Manual"})
+                    "pnl":round(pnl_close,2), "pnl_pct":round(pnl_pct,2), "exit_reason":"Manual"})
                 del port["positions"][sym]
-                _send_telegram(tg_token,tg_chat,f"📤 *Trade Closed*\n*{sym}* @ ₹{cmp_:.2f}\nP&L: ₹{pnl_close:,.0f} ({pnl_pct:+.1f}%)")
+                _send_telegram(tg_token, tg_chat,
+                               f"📤 *Trade Closed*\n*{sym}* @ ₹{cmp_:.2f}\nP&L: ₹{pnl_close:,.0f} ({pnl_pct:+.1f}%)")
                 st.rerun()
             st.markdown("</div><br>", unsafe_allow_html=True)
 
@@ -1843,7 +2152,7 @@ def tab_analyse(stocks_df, capital):
                 sd_in = score(ind_in); tr_in = sd_in["trade"]
                 sh_in,_ = position_size(port["cash"], tr_in["entry"], tr_in["sl"], risk_pct)
                 ci1,ci2,ci3 = st.columns(3)
-                e_in = ci1.number_input("Entry ₹", value=float(tr_in["entry"]))
+                e_in = ci1.number_input("Entry ₹",     value=float(tr_in["entry"]))
                 s_in = ci2.number_input("Stop Loss ₹", value=float(tr_in["sl"]))
                 t_in = ci3.number_input("Target T1 ₹", value=float(tr_in["t1"]))
                 sh   = st.number_input("Shares", value=sh_in, min_value=1)
@@ -1851,31 +2160,40 @@ def tab_analyse(stocks_df, capital):
                     cost = e_in*sh
                     if cost <= port["cash"]:
                         setup_lbl = identify_setup_from_score(sd_in)
-                        port["positions"][sym_in] = {"symbol":sym_in,"setup":setup_lbl,
-                            "entry":e_in,"stop_loss":s_in,"trailing_sl":s_in,"target":t_in,
-                            "t2":tr_in["t2"],"t3":tr_in["t3"],"shares":sh,"total_shares":sh,
-                            "current_price":e_in,"open_date":datetime.now().strftime("%Y-%m-%d"),"free_trade":False}
+                        port["positions"][sym_in] = {
+                            "symbol":sym_in, "setup":setup_lbl,
+                            "entry":e_in, "stop_loss":s_in, "trailing_sl":s_in, "target":t_in,
+                            "t2":tr_in["t2"], "t3":tr_in["t3"], "shares":sh, "total_shares":sh,
+                            "current_price":e_in,
+                            "open_date":datetime.now().strftime("%Y-%m-%d"), "free_trade":False}
                         port["cash"] -= cost
-                        st.success(f"Opened {sym_in}: {sh} shares @ ₹{e_in:.2f}"); st.rerun()
-                    else: st.error("Insufficient cash.")
-            except Exception as e: st.warning(f"Could not fetch data for {sym_in}: {e}")
+                        st.success(f"Opened {sym_in}: {sh} shares @ ₹{e_in:.2f}")
+                        st.rerun()
+                    else:
+                        st.error("Insufficient cash.")
+            except Exception as e:
+                st.warning(f"Could not fetch data for {sym_in}: {e}")
 
     if port["closed_trades"]:
         st.divider(); st.markdown("### Closed Trades")
         td = pd.DataFrame(port["closed_trades"])
         cols_show = ["symbol","setup","entry","exit_price","pnl_pct","pnl","exit_reason","exit_date"]
         avail = [c for c in cols_show if c in td.columns]
-        td_show = td[avail].copy(); td_show.columns = [c.replace("_"," ").title() for c in avail]
-        if "Pnl Pct" in td_show.columns: td_show["Pnl Pct"] = td_show["Pnl Pct"].map(lambda x:f"{x:+.1f}%")
-        if "Pnl" in td_show.columns: td_show["Pnl"] = td_show["Pnl"].map(lambda x:f"₹{x:,.0f}")
+        td_show = td[avail].copy()
+        td_show.columns = [c.replace("_"," ").title() for c in avail]
+        if "Pnl Pct" in td_show.columns:
+            td_show["Pnl Pct"] = td_show["Pnl Pct"].map(lambda x: f"{x:+.1f}%")
+        if "Pnl" in td_show.columns:
+            td_show["Pnl"] = td_show["Pnl"].map(lambda x: f"₹{x:,.0f}")
         st.dataframe(td_show, use_container_width=True)
-        wins  = [t["pnl"] for t in port["closed_trades"] if t["pnl"]>0]
-        losss = [t["pnl"] for t in port["closed_trades"] if t["pnl"]<=0]
+        wins  = [t["pnl"] for t in port["closed_trades"] if t["pnl"] >  0]
+        losss = [t["pnl"] for t in port["closed_trades"] if t["pnl"] <= 0]
         if port["closed_trades"]:
             m1,m2,m3 = st.columns(3)
             m1.metric("Win Rate", f"{len(wins)/len(port['closed_trades'])*100:.1f}%")
             m2.metric("Avg Win",  f"₹{np.mean(wins):,.0f}"  if wins  else "—")
             m3.metric("Avg Loss", f"₹{np.mean(losss):,.0f}" if losss else "—")
+
 
 # ── TAB: HOLDINGS ──────────────────────────────────────────────────────────────
 def tab_holdings():
