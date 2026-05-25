@@ -1103,13 +1103,22 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
     rr = round((t1-entry)/max(entry-sl, 0.01), 2)
 
     bb_pct = float((l["close"]-l["bb_lower"])/max(l["bb_upper"]-l["bb_lower"],0.01)*100)
+
+    # Entry zone: low = optimal demand-zone entry, high = acceptable chase limit
+    _zone_pct  = 0.018 if verdict == "STRONG BUY" else 0.025
+    entry_high = round(min(entry * (1 + _zone_pct), cmp * 0.997), 2)
+    if entry_high < entry + 0.50:      # gap < ₹0.50 — widen to just-below CMP
+        entry_high = round(cmp * 0.997, 2)
+    entry_high = max(entry_high, entry)
+
     return {
         "total":total,"raw":raw,"capped":capped,"l1":l1,"l2":l2,"l3":l3,
         "verdict":verdict,"vcol":vcol,"details":details,
         "support":support,"resistance":resistance,
         "stage":stage_code,"stage_label":stage_label,
         "vcp":vcp_hit,"vcp_label":vcp_label,"cmp":cmp,
-        "trade":{"entry":entry,"entry_label":elabel,"sl":sl,"t1":t1,"t2":t2,"t3":t3,"rr":rr,
+        "trade":{"entry":entry,"entry_high":entry_high,"entry_label":elabel,
+                 "sl":sl,"t1":t1,"t2":t2,"t3":t3,"rr":rr,
                  "atr":round(atr,2),"adr":round(adr,2),"mdr":round(mdr,2),
                  "breakout_trigger":round(breakout_trigger,2),
                  "scale1":round(entry*1.03,2),"scale2":round(entry*1.05,2),"scale3":round(entry*1.07,2)},
@@ -1170,8 +1179,17 @@ def make_chart(df: pd.DataFrame, sd: dict, symbol: str, show_vwap: bool = False)
 
 
     tr = sd["trade"]
-    fig.add_hline(y=tr["entry"],line=dict(color=hex_rgba(C["blue"],0.8),width=1.8),
-        annotation_text=f"Entry ₹{tr['entry']:.0f}",annotation_font=dict(color=C["blue"],size=10),row=1,col=1)
+    _eh = tr.get("entry_high", tr["entry"])
+    if _eh > tr["entry"] + 0.5:
+        # Shaded entry zone band
+        fig.add_hrect(y0=tr["entry"], y1=_eh,
+            fillcolor=hex_rgba(C["blue"], 0.12), line_width=0, row=1, col=1)
+    fig.add_hline(y=tr["entry"], line=dict(color=hex_rgba(C["blue"],0.85),width=1.8),
+        annotation_text=f"Entry Low ₹{tr['entry']:.0f}",
+        annotation_font=dict(color=C["blue"],size=10), row=1, col=1)
+    fig.add_hline(y=_eh, line=dict(color=hex_rgba(C["blue"],0.5),width=1.2,dash="dot"),
+        annotation_text=f"Entry High ₹{_eh:.0f}",
+        annotation_font=dict(color=C["blue"],size=9), row=1, col=1)
     fig.add_hline(y=tr["sl"],line=dict(color=hex_rgba(C["red"],0.7),width=1.5,dash="dot"),
         annotation_text=f"SL ₹{tr['sl']:.0f}",annotation_font=dict(color=C["red"],size=10),row=1,col=1)
     fig.add_hline(y=tr["t1"],line=dict(color=hex_rgba(C["green"],0.5),width=1.2,dash="dot"),
@@ -1629,7 +1647,8 @@ def _score_one(sym: str, nifty_ret: float = 0.0):
         return {"Symbol":sym,"Score":sd["total"],"Verdict":sd["verdict"],
                 "Stage":sd.get("stage_label",""),"L1 Trend":sd["l1"],
                 "L2 Momentum":sd["l2"],"L3 Setup":sd["l3"],
-                "CMP":f"₹{sd['cmp']:,.2f}","Entry":f"₹{tr['entry']:,.2f}",
+                "CMP":f"₹{sd['cmp']:,.2f}",
+                "Entry Zone":f"₹{tr['entry']:,.0f} – ₹{tr.get('entry_high', tr['entry']):,.0f}",
                 "SL":f"₹{tr['sl']:,.2f}","R:R":f"{tr['rr']}x",
                 "RS Raw": round(rs_raw, 1),
                 "Weekly": mtf["signal"],
@@ -1909,7 +1928,10 @@ def tab_analyse(stocks_df, capital):
         bt_line = ""
         if sd["verdict"] == "WATCHLIST" and tr.get("breakout_trigger", 0) > 0:
             bt_line = kpi_row("⚡ Breakout Confirm above", f"₹{tr['breakout_trigger']:,.2f}", C["amber"])
-        trade_html = (kpi_row(tr["entry_label"],      f"₹{tr['entry']:,.2f}", entry_col) +
+        _eh_a = tr.get("entry_high", tr["entry"])
+        _zone_str = (f"₹{tr['entry']:,.2f}  –  ₹{_eh_a:,.2f}"
+                     if _eh_a > tr["entry"] + 0.50 else f"₹{tr['entry']:,.2f}")
+        trade_html = (kpi_row(tr["entry_label"], _zone_str, entry_col) +
                       kpi_row("Stop Loss (below demand)", f"₹{tr['sl']:,.2f}", C["red"]) +
                       bt_line +
                       kpi_row("T1 — Book 70%",        f"₹{tr['t1']:,.2f}",    C["green"]) +
@@ -1919,6 +1941,16 @@ def tab_analyse(stocks_df, capital):
                       kpi_row("ADR / MDR",             f"₹{tr['adr']:,.0f}  /  ₹{tr['mdr']:,.0f}", C["muted"]))
         st.markdown(f"<div style='background:{C['card']};border:1px solid {C['border']};"
                     f"border-radius:10px;padding:12px 16px'>{trade_html}</div>", unsafe_allow_html=True)
+        if _eh_a > tr["entry"] + 0.50:
+            st.markdown(
+                f"<div style='background:{hex_rgba(C['blue'],0.08)};border:1px solid {hex_rgba(C['blue'],0.3)};"
+                f"border-radius:8px;padding:8px 12px;margin-top:6px;font-family:DM Sans;font-size:12px'>"
+                f"<span style='color:{C['blue']};font-weight:600'>📌 Entry Zone:</span>"
+                f"<span style='color:{C['text']}'> Place a limit order <b>anywhere between "
+                f"₹{tr['entry']:,.2f} and ₹{_eh_a:,.2f}</b>. "
+                f"Lower end = optimal (near demand zone). Upper end = still acceptable. "
+                f"Do not chase above ₹{_eh_a:,.2f}.</span></div>",
+                unsafe_allow_html=True)
         st.markdown(f"<p style='font-size:11px;color:{C['muted']};margin:10px 0 4px;"
                     f"font-family:DM Sans,sans-serif;font-weight:500'>3-5-7 Scaling Levels</p>", unsafe_allow_html=True)
         scale_html = (kpi_row("Scale Out 1 (+3%)", f"₹{tr['scale1']:,.2f}", C["green"]) +
@@ -2122,7 +2154,7 @@ def tab_screener(stocks_df):
         # Editable table with star column for bulk add
         filtered["⭐"] = False
         display_cols = ["⭐","Symbol","Verdict","Score","RS Rating","Weekly","L1 Trend","L2 Momentum",
-                        "L3 Setup","CMP","Entry","SL","R:R","Buy Signals","Confluence","WL","Sector"]
+                        "L3 Setup","CMP","Entry Zone","SL","R:R","Buy Signals","Confluence","WL","Sector"]
         avail_cols   = [c for c in display_cols if c in filtered.columns]
         edited = st.data_editor(
             filtered[avail_cols].reset_index(drop=True),
@@ -2299,7 +2331,8 @@ def tab_watchlist():
             st.markdown(
                 f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>CMP / Entry</div>"
                 f"<div style='font-family:JetBrains Mono,monospace;font-size:13px;color:{C['text']}'>₹{cmp:,.2f}</div>"
-                f"<div style='font-size:11px;color:{C['blue']};font-family:DM Sans'>Entry ₹{tr['entry']:,.2f}</div>"
+                f"<div style='font-size:11px;color:{C['blue']};font-family:DM Sans'>"
+                f"Zone ₹{tr['entry']:,.0f} – ₹{tr.get('entry_high', tr['entry']):,.0f}</div>"
                 f"<div style='font-size:10px;color:{C['red']};font-family:DM Sans'>SL ₹{tr['sl']:,.2f}</div>",
                 unsafe_allow_html=True)
         with h4:
@@ -2900,24 +2933,23 @@ def tab_backtest(stocks_df):
         st.session_state["bt_selected_syms"] = _preset_map[_preset_choice]
         st.session_state["_bt_last_preset"]  = _preset_choice
 
-    # Multiselect with full NSE search
-    _all_display   = stocks_df["display"].tolist()
-    _sym_to_disp   = dict(zip(stocks_df["symbol"], stocks_df["display"]))
-    _disp_to_sym   = {v: k for k,v in _sym_to_disp.items()}
-    _default_syms  = st.session_state.get("bt_selected_syms",
+    # Multiselect with full NSE search — options ARE symbols; format_func shows name
+    _all_syms      = stocks_df["symbol"].tolist()
+    _sym_to_name   = dict(zip(stocks_df["symbol"], stocks_df["name"]))
+    _valid_sym_set = set(_all_syms)
+    _default_syms  = [s for s in st.session_state.get("bt_selected_syms",
                                           ["RELIANCE","TCS","INFY","HDFCBANK","ICICIBANK"])
-    _default_disp  = [_sym_to_disp.get(s, s + "  —  " + s) for s in _default_syms
-                      if _sym_to_disp.get(s, s + "  —  " + s) in _all_display]
+                      if s in _valid_sym_set]
 
-    _selected_disp = st.multiselect(
+    _selected_syms = st.multiselect(
         "Search and add symbols",
-        options=_all_display,
-        default=_default_disp,
+        options=_all_syms,
+        default=_default_syms,
+        format_func=lambda s: f"{s}  —  {_sym_to_name.get(s, s)}",
         key="bt_multiselect",
         placeholder="Type symbol or company name  (e.g. RELIANCE, Infosys, TCS...)",
         label_visibility="collapsed")
-    st.session_state["bt_selected_syms"] = [_disp_to_sym.get(d, d.split("  —  ")[0].strip())
-                                             for d in _selected_disp]
+    st.session_state["bt_selected_syms"] = _selected_syms
 
     # Also allow raw text entry for power users
     with st.expander("➕ Or type symbols manually (comma-separated)"):
