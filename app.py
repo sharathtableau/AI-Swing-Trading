@@ -3231,3 +3231,7 @@ def main():
     with t_wl:   tab_watchlist()
     with t_hd:   tab_holdings()
     with t_pf:   tab_portfolio(capital, risk_pct, tg_token, tg_chat)
+    with t_back: tab_backtest(stocks_df)
+
+# ── Entry point — called directly so Streamlit Cloud always executes it ──────
+main()
