@@ -2858,7 +2858,7 @@ def tab_holdings():
 
 
 # ── TAB: BACKTEST ──────────────────────────────────────────────────────────────
-def tab_backtest():
+def tab_backtest(stocks_df):
     st.markdown("### 🧪 Strategy Backtest")
     st.caption("Walk-forward validation · 70% train / 30% test split · signals from full scoring engine")
 
@@ -2873,17 +2873,72 @@ def tab_backtest():
 
     bt_results = st.session_state.get("bt_results")
 
-    symbols_input = st.text_area(
-        "NSE Symbols (comma-separated)",
-        value="RELIANCE,TCS,INFY,HDFCBANK,ICICIBANK",
-        height=68,
-    )
+    # ── Symbol picker ─────────────────────────────────────────────────────────
+    st.markdown(
+        f"<p style='font-family:DM Sans;font-size:12px;font-weight:500;"
+        f"color:{C['muted']};text-transform:uppercase;letter-spacing:.08em;"
+        f"margin-bottom:6px'>Select Symbols to Backtest</p>",
+        unsafe_allow_html=True)
+
+    # Quick-pick preset baskets
+    _preset_map = {
+        "Nifty 50 (all)":   NIFTY50,
+        "Nifty Next 50":    NEXT50,
+        "Top 10 (default)": ["RELIANCE","TCS","INFY","HDFCBANK","ICICIBANK",
+                              "BHARTIARTL","TITAN","BAJFINANCE","SBIN","HCLTECH"],
+        "IT Sector":        [s for s,sec in SECTOR_MAP.items() if sec=="IT"][:15],
+        "Banking Sector":   [s for s,sec in SECTOR_MAP.items() if sec=="Banking"][:15],
+        "Pharma Sector":    [s for s,sec in SECTOR_MAP.items() if sec=="Pharma"][:15],
+        "Defence & PSU":    [s for s,sec in SECTOR_MAP.items() if sec in ("Defence","Power","Infrastructure")][:15],
+    }
+    _bp1, _bp2 = st.columns([2, 3])
+    with _bp1:
+        _preset_choice = st.selectbox("Quick-pick basket", ["Custom"] + list(_preset_map.keys()),
+                                      key="bt_preset",
+                                      help="Start from a preset, then fine-tune in the multiselect below")
+    if _preset_choice != "Custom" and st.session_state.get("_bt_last_preset") != _preset_choice:
+        st.session_state["bt_selected_syms"] = _preset_map[_preset_choice]
+        st.session_state["_bt_last_preset"]  = _preset_choice
+
+    # Multiselect with full NSE search
+    _all_display   = stocks_df["display"].tolist()
+    _sym_to_disp   = dict(zip(stocks_df["symbol"], stocks_df["display"]))
+    _disp_to_sym   = {v: k for k,v in _sym_to_disp.items()}
+    _default_syms  = st.session_state.get("bt_selected_syms",
+                                          ["RELIANCE","TCS","INFY","HDFCBANK","ICICIBANK"])
+    _default_disp  = [_sym_to_disp.get(s, s + "  —  " + s) for s in _default_syms
+                      if _sym_to_disp.get(s, s + "  —  " + s) in _all_display]
+
+    _selected_disp = st.multiselect(
+        "Search and add symbols",
+        options=_all_display,
+        default=_default_disp,
+        key="bt_multiselect",
+        placeholder="Type symbol or company name  (e.g. RELIANCE, Infosys, TCS...)",
+        label_visibility="collapsed")
+    st.session_state["bt_selected_syms"] = [_disp_to_sym.get(d, d.split("  —  ")[0].strip())
+                                             for d in _selected_disp]
+
+    # Also allow raw text entry for power users
+    with st.expander("➕ Or type symbols manually (comma-separated)"):
+        _manual = st.text_input("e.g. ZOMATO, IRFC, SUZLON",
+                                key="bt_manual_input",
+                                placeholder="Overrides multiselect when not empty")
+    if _manual.strip():
+        _manual_syms = [s.strip().upper() for s in _manual.split(",") if s.strip()]
+        st.session_state["bt_selected_syms"] = _manual_syms
+
+    _final_syms = st.session_state.get("bt_selected_syms", [])
+    if _final_syms:
+        st.caption(f"**{len(_final_syms)} symbol(s) selected:** {', '.join(_final_syms[:10])}"
+                   + (f" …+{len(_final_syms)-10} more" if len(_final_syms) > 10 else ""))
+
     bt_capital = st.number_input("Starting Capital (₹)", value=1_000_000, step=50_000)
 
     if st.button("▶ Run Backtest", type="primary"):
-        symbols = [s.strip().upper() for s in symbols_input.split(",") if s.strip()]
+        symbols = _final_syms
         if not symbols:
-            st.error("Enter at least one symbol.")
+            st.error("Select at least one symbol from the search box above.")
         else:
             with st.spinner("Fetching data and running simulation…"):
                 stock_data = {}
@@ -3105,7 +3160,7 @@ def main():
     with t_watch:   tab_watchlist()
     with t_hld:     tab_holdings()
     with t_port:    tab_portfolio(capital, risk_pct, tg_token, tg_chat)
-    with t_back:    tab_backtest()
+    with t_back:    tab_backtest(stocks_df)
 
 
 main()
