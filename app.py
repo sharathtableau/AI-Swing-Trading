@@ -3219,16 +3219,18 @@ def tab_backtest(stocks_df):
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────
 def main():
+    _init_state()
     stocks_df = load_nse_stocks()
+    capital, risk_pct, max_pos, max_sl_pct, tg_token, tg_chat = render_sidebar()
     t_an, t_sc, t_wl, t_hd, t_pf, t_back = st.tabs([
-        "\U0001f50d Analyse", "\U0001f4ca Screener", "\u2b50 Watchlist",
-        "\U0001f4b0 Holdings", "\U0001f4c1 Portfolio", "\U0001f9ea Backtest",
+        "\ud83d\udd0d Analyse", "\ud83d\udcca Screener", "\u2b50 Watchlist",
+        "\ud83d\udcb0 Holdings", "\ud83d\udcc1 Portfolio", "\ud83e\uddea Backtest",
     ])
-    with t_an:   tab_analyse(stocks_df)
+    with t_an:   tab_analyse(stocks_df, capital)
     with t_sc:   tab_screener(stocks_df)
     with t_wl:   tab_watchlist()
     with t_hd:   tab_holdings()
-    with t_pf:   tab_portfolio()
+    with t_pf:   tab_portfolio(capital, risk_pct, tg_token, tg_chat)
     with t_back: tab_backtest(stocks_df)
 
 if __name__ == "__main__":
