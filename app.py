@@ -259,6 +259,135 @@ def fetch_nifty_3m_return() -> float:
     except Exception:
         return 0.0
 
+
+# ── MTF · RS RATING · EARNINGS · AVWAP UTILITIES ───────────────────────────────
+
+@st.cache_data(ttl=3600)
+def fetch_ohlcv_weekly(symbol: str) -> pd.DataFrame:
+    """Weekly OHLCV for multi-timeframe analysis."""
+    df = pd.DataFrame()
+    for suffix in [".NS", ".BO"]:
+        try:
+            df = yf.download(symbol + suffix, period="2y", interval="1wk",
+                             progress=False, auto_adjust=True)
+            if not df.empty:
+                break
+        except Exception:
+            continue
+    if df.empty:
+        return pd.DataFrame()
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+    df.columns = [c.lower() for c in df.columns]
+    return df[["open","high","low","close","volume"]].dropna()
+
+@st.cache_data(ttl=3600)
+def get_mtf_signal(symbol: str) -> dict:
+    """Weekly chart trend — multi-timeframe confirmation signal."""
+    try:
+        wdf = fetch_ohlcv_weekly(symbol)
+        if len(wdf) < 20:
+            return {"aligned": False, "signal": "NEUTRAL", "color": C["muted"],
+                    "label": "Insufficient weekly data"}
+        ind = add_indicators(wdf)
+        stage_code, stage_label = detect_stage(ind)
+        l      = ind.iloc[-1]
+        rsi_w  = float(l.get("rsi", 50))
+        st_dir = float(l["st_dir"]) if "st_dir" in l.index else 1.0
+        st_bull = st_dir == 1.0
+        if stage_code == "2" and st_bull and rsi_w > 50:
+            return {"aligned": True,  "signal": "BULLISH", "color": C["green"],
+                    "label": f"Weekly Bullish · {stage_label}"}
+        elif stage_code == "4" or (not st_bull and rsi_w < 40):
+            return {"aligned": False, "signal": "BEARISH", "color": C["red"],
+                    "label": f"Weekly Bearish · {stage_label}"}
+        else:
+            return {"aligned": False, "signal": "NEUTRAL", "color": C["amber"],
+                    "label": f"Weekly Mixed · {stage_label}"}
+    except Exception:
+        return {"aligned": False, "signal": "NEUTRAL", "color": C["muted"],
+                "label": "Weekly data unavailable"}
+
+@st.cache_data(ttl=1800)
+def get_earnings_warning(symbol: str) -> dict:
+    """Return earnings date info; warns if within 15 days."""
+    try:
+        t   = yf.Ticker(symbol + ".NS")
+        cal = t.calendar
+        if cal is None:
+            return {"has_warning": False, "days_away": None, "date_str": None}
+        dates = []
+        if isinstance(cal, pd.DataFrame):
+            for col in cal.columns:
+                if "earning" in str(col).lower():
+                    for v in cal[col].dropna():
+                        try: dates.append(pd.Timestamp(v))
+                        except Exception: pass
+        elif isinstance(cal, dict):
+            for k, v in cal.items():
+                if "earning" in str(k).lower():
+                    try: dates.append(pd.Timestamp(v))
+                    except Exception: pass
+        now   = pd.Timestamp.now().replace(tzinfo=None)
+        clean = []
+        for d in dates:
+            try:
+                d2 = d.replace(tzinfo=None) if (hasattr(d, "tzinfo") and d.tzinfo) else d
+                if d2 >= now:
+                    clean.append(d2)
+            except Exception:
+                pass
+        if not clean:
+            return {"has_warning": False, "days_away": None, "date_str": None}
+        next_d = min(clean)
+        days   = (next_d - now).days
+        return {"has_warning": days <= 15, "days_away": days,
+                "date_str": next_d.strftime("%d %b %Y")}
+    except Exception:
+        return {"has_warning": False, "days_away": None, "date_str": None}
+
+def compute_anchored_vwap(df: pd.DataFrame) -> pd.Series:
+    """VWAP anchored to the most recent significant swing low (20-bar min in last 60 bars)."""
+    try:
+        if len(df) < 10:
+            return pd.Series(np.nan, index=df.index)
+        lookback = min(60, len(df))
+        sub      = df.tail(lookback).reset_index(drop=True)
+        anchor   = int(sub["low"].idxmin())
+        anchor   = max(0, min(anchor, len(sub) - 4))
+        seg      = sub.iloc[anchor:].copy()
+        if len(seg) < 2:
+            return pd.Series(np.nan, index=df.index)
+        tp       = (seg["high"] + seg["low"] + seg["close"]) / 3
+        cum_vol  = seg["volume"].cumsum()
+        vwap_v   = (tp * seg["volume"]).cumsum() / cum_vol.replace(0, np.nan)
+        result   = pd.Series(np.nan, index=df.index)
+        vwap_v   = vwap_v.reset_index(drop=True)
+        tail_idx = list(df.index[-lookback:])
+        for pos, idx in enumerate(tail_idx):
+            offset = pos - anchor
+            if 0 <= offset < len(vwap_v):
+                result[idx] = float(vwap_v.iloc[offset])
+        return result
+    except Exception:
+        return pd.Series(np.nan, index=df.index)
+
+@st.cache_data(ttl=3600)
+def _get_rs_raw(sym: str) -> float:
+    """Weighted RS score: (3M×2 + 6M + 12M) / 4 for percentile ranking."""
+    try:
+        df = fetch_ohlcv(sym)
+        c  = df["close"].dropna()
+        if len(c) < 20:
+            return 0.0
+        def pr(n):
+            n = min(n, len(c)-1)
+            return float((c.iloc[-1] - c.iloc[-n]) / max(c.iloc[-n], 0.01) * 100)
+        return (pr(63)*2 + pr(126) + pr(252)) / 4
+    except Exception:
+        return 0.0
+
+
 # ── PURE NUMPY/PANDAS INDICATOR ENGINE (no pandas_ta / numba) ────────────────
 def _ema(s: pd.Series, n: int) -> pd.Series:
     return s.ewm(span=n, adjust=False).mean()
@@ -995,7 +1124,7 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
     }
 
 # ── CHART ──────────────────────────────────────────────────────────────────────
-def make_chart(df: pd.DataFrame, sd: dict, symbol: str) -> go.Figure:
+def make_chart(df: pd.DataFrame, sd: dict, symbol: str, show_vwap: bool = False) -> go.Figure:
     fig = make_subplots(rows=3, cols=1, shared_xaxes=True,
                         row_heights=[0.58,0.21,0.21], vertical_spacing=0.02)
     bg, pbg = C["bg"], C["card"]
@@ -1022,6 +1151,15 @@ def make_chart(df: pd.DataFrame, sd: dict, symbol: str) -> go.Figure:
         marker=dict(color=C["green"],size=3), name="ST Bull"), row=1, col=1)
     fig.add_trace(go.Scatter(x=bear_df.index, y=bear_df["st_val"], mode="markers",
         marker=dict(color=C["red"],size=3), name="ST Bear"), row=1, col=1)
+
+    # Anchored VWAP overlay
+    if show_vwap:
+        vwap_s = compute_anchored_vwap(df)
+        if not vwap_s.dropna().empty:
+            fig.add_trace(go.Scatter(
+                x=list(df.index), y=vwap_s.values,
+                line=dict(color=C["purple"], width=1.8, dash="dashdot"),
+                name="Anchored VWAP", opacity=0.9), row=1, col=1)
 
     for s in sd["support"][:2]:
         fig.add_hline(y=s, line=dict(color=hex_rgba(C["green"],0.4),width=1,dash="dash"),
@@ -1486,11 +1624,15 @@ def _score_one(sym: str, nifty_ret: float = 0.0):
         live_px = fetch_live_price(sym).get("price", 0.0) or 0.0
         sd = score(ind, nifty_ret=nifty_ret, live_price=live_px)
         tr = sd["trade"]
+        rs_raw = _get_rs_raw(sym)
+        mtf    = get_mtf_signal(sym)
         return {"Symbol":sym,"Score":sd["total"],"Verdict":sd["verdict"],
                 "Stage":sd.get("stage_label",""),"L1 Trend":sd["l1"],
                 "L2 Momentum":sd["l2"],"L3 Setup":sd["l3"],
                 "CMP":f"₹{sd['cmp']:,.2f}","Entry":f"₹{tr['entry']:,.2f}",
                 "SL":f"₹{tr['sl']:,.2f}","R:R":f"{tr['rr']}x",
+                "RS Raw": round(rs_raw, 1),
+                "Weekly": mtf["signal"],
                 "Sector": SECTOR_MAP.get(sym, "Other"),
                 "Buy Signals": sd.get("buy_count", 0),
                 "Sell Signals": sd.get("sell_count", 0),
@@ -1515,7 +1657,15 @@ def run_screener(symbols: list, workers: int = 20) -> pd.DataFrame:
             if res: results.append(res)
     prog.empty(); live_box.empty()
     if not results: return pd.DataFrame()
-    return pd.DataFrame(results).sort_values("Score",ascending=False).reset_index(drop=True)
+    df_r = pd.DataFrame(results).sort_values("Score",ascending=False).reset_index(drop=True)
+    # Compute RS Rating (1-99 percentile) across the scanned universe
+    if "RS Raw" in df_r.columns:
+        raw_scores = df_r["RS Raw"].tolist()
+        def _rs_pct(v):
+            below = sum(1 for s in raw_scores if s < v)
+            return max(1, min(99, int(below / max(len(raw_scores),1) * 99) + 1))
+        df_r["RS Rating"] = df_r["RS Raw"].apply(_rs_pct)
+    return df_r
 
 # ── PORTFOLIO HELPERS ──────────────────────────────────────────────────────────
 def position_size(capital, entry, sl, risk_pct=0.01, max_pct=0.20):
@@ -1635,6 +1785,11 @@ def tab_analyse(stocks_df, capital):
             st.error(f"Could not load {sym}. Check the symbol or try again. ({e})")
             return
 
+    # ── Extra signals (cached) ─────────────────────────────────────────────────
+    mtf    = get_mtf_signal(sym)
+    earn_w = get_earnings_warning(sym)
+    rs_raw = _get_rs_raw(sym)
+
     latest = df_ind.iloc[-1]
     price  = live["price"] if live["price"] else float(latest["close"])
     chg    = live["change"]; pct = live["pct"]
@@ -1655,6 +1810,44 @@ def tab_analyse(stocks_df, capital):
         f"<span style='font-family:JetBrains Mono,monospace;font-size:15px;color:{chg_c}'>{sign}{chg:.2f} ({sign}{pct:.2f}%)</span>"
         f"</div></div></div>", unsafe_allow_html=True)
 
+    # ── MTF + Earnings + RS badges ────────────────────────────────────────────
+    badge_parts = []
+    _mtf_color = mtf["color"]; _mtf_label = mtf["label"]
+    mtf_ico  = "🟢" if mtf["signal"] == "BULLISH" else ("🔴" if mtf["signal"] == "BEARISH" else "🟡")
+    badge_parts.append(
+        "<span style='background:" + hex_rgba(_mtf_color,0.15) + ";color:" + _mtf_color + ";"
+        "border:1px solid " + hex_rgba(_mtf_color,0.4) + ";border-radius:6px;"
+        "padding:3px 10px;font-size:12px;font-family:DM Sans'>"
+        + mtf_ico + " " + _mtf_label + "</span>")
+    rs_color = C["green"] if rs_raw > 5 else (C["red"] if rs_raw < -5 else C["amber"])
+    badge_parts.append(
+        "<span style='background:" + hex_rgba(rs_color,0.12) + ";color:" + rs_color + ";"
+        "border:1px solid " + hex_rgba(rs_color,0.4) + ";border-radius:6px;"
+        "padding:3px 10px;font-size:12px;font-family:DM Sans'>"
+        + f"RS Score {rs_raw:+.1f}%</span>")
+    _col_red = C["red"]; _col_amb = C["amber"]
+    if earn_w["has_warning"]:
+        badge_parts.append(
+            "<span style='background:" + hex_rgba(_col_red,0.15) + ";color:" + _col_red + ";"
+            "border:1px solid " + hex_rgba(_col_red,0.4) + ";border-radius:6px;"
+            "padding:3px 10px;font-size:12px;font-family:DM Sans'>"
+            + f"⚠️ Earnings in {earn_w['days_away']}d ({earn_w['date_str']})</span>")
+    elif earn_w["date_str"]:
+        badge_parts.append(
+            "<span style='background:" + hex_rgba(_col_amb,0.1) + ";color:" + _col_amb + ";"
+            "border:1px solid " + hex_rgba(_col_amb,0.3) + ";border-radius:6px;"
+            "padding:3px 10px;font-size:12px;font-family:DM Sans'>"
+            + f"📅 Next earnings: {earn_w['date_str']}</span>")
+    st.markdown(
+        "<div style='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px'>" +
+        "  ".join(badge_parts) + "</div>",
+        unsafe_allow_html=True)
+    if earn_w["has_warning"]:
+        st.warning(
+            f"⚠️ **Earnings Risk**: {sym} reports in **{earn_w['days_away']} day(s)** "
+            f"({earn_w['date_str']}). Swing trades entering now carry gap risk. "
+            f"Consider waiting until after results or sizing down.")
+
     c1, c2, c3 = st.columns([1.1,1.4,1.3])
     with c1:
         st.plotly_chart(make_gauge(sd["total"],sd["verdict"],sd["vcol"]), config={"displayModeBar":False})
@@ -1663,9 +1856,31 @@ def tab_analyse(stocks_df, capital):
             cap_msg = (f"Stage {sc} — no long positions" if sc in ("3","4") else "Weak trend gate — score capped")
             st.markdown(f"<p style='text-align:center;color:{C['red']};font-family:JetBrains Mono,monospace;"
                         f"font-size:11px;margin-top:-10px'>{cap_msg}</p>", unsafe_allow_html=True)
-        if sd.get("cpr_downgraded"):
+        if sd.get("conf_downgraded"):
             st.markdown(f"<p style='text-align:center;color:{C['red']};font-family:JetBrains Mono,monospace;"
-                        f"font-size:11px;margin-top:2px'>🚫 CPR filter downgraded verdict</p>", unsafe_allow_html=True)
+                        f"font-size:11px;margin-top:2px'>⬇ Confluence downgraded verdict</p>", unsafe_allow_html=True)
+
+        # Score history sparkline
+        hist_key  = f"score_hist_{sym}"
+        if hist_key not in st.session_state:
+            st.session_state[hist_key] = []
+        _entry = {"ts": datetime.now().strftime("%H:%M"), "score": sd["total"], "verdict": sd["verdict"]}
+        _hist  = st.session_state[hist_key]
+        if not _hist or _hist[-1]["score"] != sd["total"]:
+            _hist.append(_entry)
+        st.session_state[hist_key] = _hist[-20:]
+        if len(_hist) >= 2:
+            _sx = [h["ts"]    for h in _hist]
+            _sy = [h["score"] for h in _hist]
+            _sc = [C["green"] if h["verdict"]=="STRONG BUY" else
+                   (C["amber"] if h["verdict"]=="WATCHLIST" else C["red"]) for h in _hist]
+            _fig_sp = go.Figure(go.Scatter(x=_sx, y=_sy, mode="lines+markers",
+                line=dict(color=C["blue"], width=1.5),
+                marker=dict(color=_sc, size=5)))
+            _fig_sp.update_layout(paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",
+                margin=dict(l=0,r=0,t=4,b=0), height=65, showlegend=False,
+                xaxis=dict(visible=False), yaxis=dict(visible=False, range=[0,100]))
+            st.plotly_chart(_fig_sp, config={"displayModeBar":False}, key=f"sp_{sym}")
 
     with c2:
         st.markdown(f"<p style='font-family:DM Sans,sans-serif;font-size:12px;font-weight:500;"
@@ -1729,11 +1944,16 @@ def tab_analyse(stocks_df, capital):
 
     # Chart
     st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown(f"<p style='font-family:DM Sans,sans-serif;font-size:12px;font-weight:500;"
-                f"color:{C['muted']};text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px'>"
-                f"12-Month Chart · EMA 8/13/21/50 · 30W MA · Supertrend · Entry/SL/T1/T2/T3</p>",
-                unsafe_allow_html=True)
-    st.plotly_chart(make_chart(df_ind, sd, sym), config={"displayModeBar":True})
+    _ch_lbl, _ch_tgl = st.columns([4, 1])
+    with _ch_lbl:
+        st.markdown(f"<p style='font-family:DM Sans,sans-serif;font-size:12px;font-weight:500;"
+                    f"color:{C['muted']};text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px'>"
+                    f"12-Month Chart · EMA 8/13/21/50 · 30W MA · Supertrend · Entry/SL/T1/T2/T3</p>",
+                    unsafe_allow_html=True)
+    with _ch_tgl:
+        show_vwap = st.checkbox("Anchored VWAP", value=False, key=f"vwap_{sym}",
+                                help="Overlay VWAP anchored from the most recent swing low")
+    st.plotly_chart(make_chart(df_ind, sd, sym, show_vwap=show_vwap), config={"displayModeBar":True})
 
     # Signal grid
     st.markdown("<hr>", unsafe_allow_html=True)
@@ -1817,6 +2037,8 @@ def tab_screener(stocks_df):
                  "Nifty Smallcap":"~1 min","Nifty 100":"~2 min","All 300+":"~4 min",
                  "All NSE Listed (~2000 stocks)":"~8–12 min"}
 
+    all_sectors = ["All Sectors"] + sorted(set(SECTOR_MAP.values()))
+
     scr_c1,scr_c2,scr_c3,scr_c4 = st.columns([2,1,1,1])
     with scr_c1: basket = st.selectbox("Basket", basket_options, key="scr_basket")
     with scr_c2: min_score = st.number_input("Min score", min_value=0, max_value=100, value=55, step=5, key="scr_min")
@@ -1825,6 +2047,13 @@ def tab_screener(stocks_df):
         st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
         buy_filter = st.checkbox("3+ BUY signals only", value=False, key="scr_buy_filter",
                                  help="Show only stocks where 3 or more of the 5 strategies agree on BUY")
+    scr_c5, scr_c6 = st.columns([2, 2])
+    with scr_c5:
+        sector_filter = st.selectbox("Sector Filter", all_sectors, key="scr_sector",
+                                     help="Filter results by sector")
+    with scr_c6:
+        weekly_filter = st.selectbox("Weekly Trend", ["All", "BULLISH only", "Not BEARISH"],
+                                     key="scr_weekly", help="Filter by multi-timeframe weekly signal")
 
     custom_input = st.text_input("Custom symbols (comma-separated)",
                                  placeholder="e.g. ZOMATO, IRFC, SUZLON", key="scr_custom")
@@ -1865,6 +2094,12 @@ def tab_screener(stocks_df):
         filtered = filtered[filtered["Score"] >= min_score].copy()
         if buy_filter and "Buy Signals" in filtered.columns:
             filtered = filtered[filtered["Buy Signals"] >= 3].copy()
+        if sector_filter != "All Sectors" and "Sector" in filtered.columns:
+            filtered = filtered[filtered["Sector"] == sector_filter].copy()
+        if weekly_filter == "BULLISH only" and "Weekly" in filtered.columns:
+            filtered = filtered[filtered["Weekly"] == "BULLISH"].copy()
+        elif weekly_filter == "Not BEARISH" and "Weekly" in filtered.columns:
+            filtered = filtered[filtered["Weekly"] != "BEARISH"].copy()
 
         st.markdown(
             f"<p style='font-family:DM Sans;font-size:13px;color:{C['muted']};"
@@ -1886,13 +2121,21 @@ def tab_screener(stocks_df):
 
         # Editable table with star column for bulk add
         filtered["⭐"] = False
-        display_cols = ["⭐","Symbol","Verdict","Score","L1 Trend","L2 Momentum",
+        display_cols = ["⭐","Symbol","Verdict","Score","RS Rating","Weekly","L1 Trend","L2 Momentum",
                         "L3 Setup","CMP","Entry","SL","R:R","Buy Signals","Confluence","WL","Sector"]
         avail_cols   = [c for c in display_cols if c in filtered.columns]
         edited = st.data_editor(
             filtered[avail_cols].reset_index(drop=True),
             column_config={"⭐": st.column_config.CheckboxColumn("Add to WL", default=False)},
             hide_index=True, key="scr_editor")
+
+        # CSV Export
+        _csv_df = filtered[avail_cols].drop(columns=["⭐"], errors="ignore")
+        st.download_button(
+            label="⬇ Download CSV",
+            data=_csv_df.to_csv(index=False).encode("utf-8"),
+            file_name=f"swing_screener_{basket.replace(' ','_')}.csv",
+            mime="text/csv", key="scr_csv")
 
         col_add, col_tg = st.columns([1, 3])
         if col_add.button("⭐ Add selected to Watchlist", key="scr_add_wl"):
@@ -1917,6 +2160,41 @@ def tab_screener(stocks_df):
                 st.success("Telegram alert sent!")
             else:
                 st.warning("Add Telegram token and chat ID in Settings.")
+
+        # ── Gap Scanner ──────────────────────────────────────────────────────────
+        with st.expander("⚡ Pre-Market / Intraday Gap Scanner"):
+            st.caption("Stocks in this scan basket with biggest % gap vs yesterday's close. Uses cached live prices.")
+            if st.button("🔍 Scan Gaps Now", key="gap_scan_btn"):
+                _gap_syms = filtered["Symbol"].tolist() if not filtered.empty else syms[:50]
+                _gap_data = []
+                _gp = st.progress(0, text="Scanning gaps…")
+                for _gi, _gs in enumerate(_gap_syms):
+                    try:
+                        _lv = fetch_live_price(_gs)
+                        if _lv["price"] > 0 and _lv["pct"] != 0:
+                            _gap_data.append({"Symbol": _gs,
+                                "CMP": f"₹{_lv['price']:,.2f}",
+                                "Change": f"{_lv['change']:+.2f}",
+                                "Gap %": round(_lv["pct"], 2),
+                                "Sector": SECTOR_MAP.get(_gs, "Other")})
+                    except Exception:
+                        pass
+                    _gp.progress((_gi+1)/max(len(_gap_syms),1), text=f"Scanning {_gs}…")
+                _gp.empty()
+                if _gap_data:
+                    _gdf = pd.DataFrame(_gap_data).sort_values("Gap %", ascending=False)
+                    _gup  = _gdf[_gdf["Gap %"] >  1.5]
+                    _gdn  = _gdf[_gdf["Gap %"] < -1.5].sort_values("Gap %")
+                    if not _gup.empty:
+                        st.markdown(f"**🟢 Gap Up ({len(_gup)} stocks)**")
+                        st.dataframe(_gup.reset_index(drop=True), use_container_width=True)
+                    if not _gdn.empty:
+                        st.markdown(f"**🔴 Gap Down ({len(_gdn)} stocks)**")
+                        st.dataframe(_gdn.reset_index(drop=True), use_container_width=True)
+                    if _gup.empty and _gdn.empty:
+                        st.info("No significant gaps (>1.5%) detected.")
+                else:
+                    st.info("Could not fetch live prices.")
 
         # Stage 1 high-probability view
         with st.expander("🔬 Stage 1→2 Emerging (High Probability)"):
@@ -1945,12 +2223,28 @@ def tab_watchlist():
         return
 
     nifty_r = fetch_nifty_3m_return()
-    c_ref, c_clr = st.columns([1, 5])
+    c_ref, c_alert, c_clr = st.columns([1, 1, 4])
     if c_ref.button("🔄 Refresh All", key="wl_refresh_all"):
         for itm in wl:
             for k in [f"wl_sd_{itm['symbol']}", f"wl_df_{itm['symbol']}"]:
                 st.session_state.pop(k, None)
         st.rerun()
+    if c_alert.button("📲 Alert All via Telegram", key="wl_alert_all",
+                      help="Send current scores for all watchlist stocks via Telegram"):
+        _tg_tok2  = st.session_state.get("tg_tok",  "")
+        _tg_ch2   = st.session_state.get("tg_chat", "")
+        if _tg_tok2 and _tg_ch2:
+            _msg_lines = ["📊 *Watchlist Update*"]
+            for _itm2 in wl:
+                _sd2 = st.session_state.get(f"wl_sd_{_itm2['symbol']}")
+                if _sd2:
+                    _v2 = _sd2["verdict"]; _t2 = _sd2["total"]
+                    _ico2 = "🟢" if _v2=="STRONG BUY" else ("🟡" if _v2=="WATCHLIST" else "🔴")
+                    _msg_lines.append(f"{_ico2} *{_itm2['symbol']}* — {_t2}/100 {_v2}")
+            _send_telegram(_tg_tok2, _tg_ch2, "\n".join(_msg_lines))
+            st.success("Telegram alert sent!")
+        else:
+            st.warning("Add Telegram token + Chat ID in Settings sidebar.")
     if c_clr.button("🗑 Clear Watchlist", key="wl_clear"):
         save_watchlist([])
         st.rerun()
@@ -2194,6 +2488,49 @@ def tab_portfolio(capital, risk_pct, tg_token, tg_chat):
             m2.metric("Avg Win",  f"₹{np.mean(wins):,.0f}"  if wins  else "—")
             m3.metric("Avg Loss", f"₹{np.mean(losss):,.0f}" if losss else "—")
 
+        # ── P&L Calendar Heatmap ──────────────────────────────────────────────
+        with st.expander("📅 P&L Calendar Heatmap", expanded=False):
+            st.caption("Daily P&L from closed trades — GitHub contribution style.")
+            _pnl_by_date = {}
+            for _tr2 in port["closed_trades"]:
+                _dt2 = _tr2.get("exit_date", "")
+                if _dt2:
+                    _pnl_by_date[_dt2] = _pnl_by_date.get(_dt2, 0) + float(_tr2.get("pnl", 0))
+            if _pnl_by_date:
+                _cal_df = pd.DataFrame([{"date": k, "pnl": v} for k,v in _pnl_by_date.items()])
+                _cal_df["date"] = pd.to_datetime(_cal_df["date"], errors="coerce")
+                _cal_df = _cal_df.dropna(subset=["date"]).sort_values("date")
+                _cal_df["week"]    = _cal_df["date"].dt.isocalendar().week.astype(int)
+                _cal_df["weekday"] = _cal_df["date"].dt.weekday
+                _cal_df["label"]   = _cal_df["date"].dt.strftime("%d %b %Y") + "<br>P&L: ₹" + _cal_df["pnl"].apply(lambda x: f"{x:+,.0f}")
+                _max_pnl = max(abs(_cal_df["pnl"].max()), abs(_cal_df["pnl"].min()), 1)
+                _fig_cal = go.Figure(go.Heatmap(
+                    x=_cal_df["week"], y=_cal_df["weekday"],
+                    z=_cal_df["pnl"],
+                    text=_cal_df["label"],
+                    hovertemplate="%{text}<extra></extra>",
+                    colorscale=[[0,"#ff4560"],[0.5,"#1a1c2e"],[1,"#00d97e"]],
+                    zmid=0, zmin=-_max_pnl, zmax=_max_pnl,
+                    showscale=True,
+                    xgap=3, ygap=3))
+                _days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+                _fig_cal.update_layout(
+                    paper_bgcolor=C["bg"], plot_bgcolor=C["bg"],
+                    font=dict(color=C["text"]),
+                    height=200, margin=dict(l=40,r=10,t=10,b=10),
+                    xaxis=dict(title="Week", showgrid=False),
+                    yaxis=dict(title="", tickvals=list(range(7)), ticktext=_days, showgrid=False))
+                st.plotly_chart(_fig_cal, config={"displayModeBar":False}, key="pnl_cal")
+                _total_pnl2 = _cal_df["pnl"].sum()
+                _win_days   = (_cal_df["pnl"] > 0).sum()
+                _loss_days  = (_cal_df["pnl"] < 0).sum()
+                _pc1, _pc2, _pc3 = st.columns(3)
+                _pc1.metric("Total Realized P&L", f"₹{_total_pnl2:+,.0f}")
+                _pc2.metric("Winning Days", str(_win_days))
+                _pc3.metric("Losing Days",  str(_loss_days))
+            else:
+                st.info("No closed trades yet — P&L calendar will appear after you exit positions.")
+
 
 # ── TAB: HOLDINGS ──────────────────────────────────────────────────────────────
 def tab_holdings():
@@ -2344,6 +2681,18 @@ def tab_holdings():
                 st.session_state.pop(cache_key, None)
                 st.rerun()
 
+        # ── Trade Journal ─────────────────────────────────────────────────────
+        j_key = f"journal_{sym}"
+        with st.expander(f"📓 Trade Journal — {sym}", expanded=False):
+            current_note = st.session_state.get(j_key, h.get("notes", ""))
+            new_note = st.text_area("Notes (why entered, thesis, observations)",
+                                    value=current_note, height=100,
+                                    key=f"jnote_{sym}",
+                                    placeholder="e.g. Stage 2 breakout with VCP, entered on EMA21 pullback, thesis: IT sector rotation…")
+            if st.button("💾 Save note", key=f"jsave_{sym}"):
+                st.session_state[j_key] = new_note
+                st.success("Note saved.")
+
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ── Fill portfolio summary at top with real post-loop totals ─────────────
@@ -2397,6 +2746,102 @@ def tab_holdings():
             "<div style='display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px'>" +
             "  ".join(badge_items) + "</div>",
             unsafe_allow_html=True)
+
+    # ── Portfolio Heatmap ─────────────────────────────────────────────────────
+    with st.expander("🗺️ Portfolio Heatmap", expanded=False):
+        st.caption("Each tile = one holding, coloured by current signal. Size = position value.")
+        _hm_labels=[]; _hm_colors=[]; _hm_parents=[]; _hm_vals=[]
+        _sig_hex = {"HOLD": "#00d97e", "BOOK PARTIAL": "#4361ee",
+                    "CAUTION": "#ffa600", "EXIT NOW": "#ff4560", "EXIT": "#ff4560"}
+        for _h in holdings:
+            _sk = f"hld_sd_{_h['symbol']}"
+            _cached = st.session_state.get(_sk)
+            if _cached is None: continue
+            _sd2, _ = _cached
+            _sig2   = get_hold_exit_signal(_sd2, float(_h.get("entry_price",0)))["signal"]
+            _val2   = float(_h.get("entry_price",0)) * int(_h.get("qty",1))
+            _hm_labels.append(_h["symbol"])
+            _hm_colors.append(_sig_hex.get(_sig2, "#8b8fa8"))
+            _hm_vals.append(max(_val2, 1))
+        if _hm_labels:
+            _fig_hm = go.Figure(go.Treemap(
+                labels=_hm_labels, parents=[""]*len(_hm_labels), values=_hm_vals,
+                marker=dict(colors=_hm_colors, line=dict(width=2, color="#08090d")),
+                textinfo="label+value",
+                textfont=dict(color="white", size=13),
+                hovertemplate="<b>%{label}</b><br>Value: ₹%{value:,.0f}<extra></extra>"))
+            _fig_hm.update_layout(paper_bgcolor=C["bg"], margin=dict(l=0,r=0,t=0,b=0), height=260)
+            st.plotly_chart(_fig_hm, config={"displayModeBar": False}, key="hm_chart")
+            _leg = {"🟢 HOLD": "#00d97e","🔵 BOOK PARTIAL":"#4361ee",
+                    "🟡 CAUTION":"#ffa600","🔴 EXIT":"#ff4560"}
+            st.markdown("  ".join(
+                f"<span style='color:{c};font-size:12px;font-family:DM Sans'>{lb}</span>"
+                for lb,c in _leg.items()), unsafe_allow_html=True)
+        else:
+            st.info("Refresh holdings to see heatmap.")
+
+    # ── Risk Dashboard ─────────────────────────────────────────────────────────
+    with st.expander("⚡ Risk Dashboard", expanded=False):
+        st.caption("Portfolio-level risk metrics — how much you stand to lose if all stops trigger.")
+        if holdings:
+            _rd_rows = []
+            _max_loss = 0.0; _total_inv2 = 0.0
+            _sector_exp = {}
+            for _h in holdings:
+                _sk2  = f"hld_sd_{_h['symbol']}"
+                _c2   = st.session_state.get(_sk2)
+                _ep   = float(_h.get("entry_price",0))
+                _qty2 = int(_h.get("qty",1))
+                _pos_val = _ep * _qty2
+                _total_inv2 += _pos_val
+                _sec2 = SECTOR_MAP.get(_h["symbol"], "Other")
+                _sector_exp[_sec2] = _sector_exp.get(_sec2, 0) + _pos_val
+                if _c2:
+                    _sd3, _ = _c2
+                    _sig3 = get_hold_exit_signal(_sd3, _ep)
+                    _sl3  = _sig3.get("atr_stop", _ep * 0.93)
+                    _loss = (_ep - _sl3) * _qty2
+                    _max_loss += max(_loss, 0)
+                    _cmp3 = _sd3.get("cmp", _ep)
+                    _pnl3 = (_cmp3 - _ep) * _qty2
+                    _rd_rows.append({
+                        "Symbol": _h["symbol"],
+                        "Position Value": f"₹{_pos_val:,.0f}",
+                        "ATR Stop": f"₹{_sl3:,.2f}",
+                        "Max Loss If SL Hit": f"₹{_loss:,.0f}",
+                        "Current P&L": f"₹{_pnl3:+,.0f}",
+                        "Sector": _sec2,
+                    })
+
+            _rd1, _rd2, _rd3 = st.columns(3)
+            _rd1.metric("Total Invested", f"₹{_total_inv2:,.0f}")
+            _rd2.metric("Max Drawdown (all stops)", f"₹{_max_loss:,.0f}",
+                        delta=f"{_max_loss/_total_inv2*100:.1f}% of portfolio" if _total_inv2 else None)
+            _dom_sec = max(_sector_exp, key=_sector_exp.get) if _sector_exp else "—"
+            _dom_pct = _sector_exp.get(_dom_sec, 0) / max(_total_inv2, 1) * 100
+            _rd3.metric("Largest Sector Exposure",
+                        f"{_dom_sec} ({_dom_pct:.0f}%)",
+                        delta="⚠️ Concentrated" if _dom_pct > 40 else "✓ Diversified")
+
+            if _rd_rows:
+                st.dataframe(pd.DataFrame(_rd_rows), use_container_width=True, hide_index=True)
+
+            # Sector concentration pie
+            if _sector_exp:
+                _fig_pie = go.Figure(go.Pie(
+                    labels=list(_sector_exp.keys()),
+                    values=list(_sector_exp.values()),
+                    hole=0.45,
+                    marker=dict(colors=["#4361ee","#00d97e","#ffa600","#ff4560","#ab47bc",
+                                        "#00bcd4","#8bc34a","#ff9800","#e91e63","#607d8b"]),
+                    textinfo="label+percent",
+                    textfont=dict(color="white", size=12)))
+                _fig_pie.update_layout(paper_bgcolor=C["bg"], showlegend=False,
+                    margin=dict(l=0,r=0,t=10,b=0), height=220,
+                    font=dict(color=C["text"]))
+                st.plotly_chart(_fig_pie, config={"displayModeBar":False}, key="sector_pie")
+        else:
+            st.info("Add holdings to see risk metrics.")
 
     with st.expander("➕ Add / Update Holding"):
         a1, a2, a3, a4 = st.columns(4)
@@ -2517,10 +2962,13 @@ def tab_backtest():
                         cash    += pnl
                         equity_curve.append(cash)
 
+                        _strats_bt = sd_bt.get("strats", {})
+                        _strat_sigs = {k: v.get("signal","NEUTRAL") for k,v in _strats_bt.items()}
                         all_trades.append({
                             "symbol": sym, "entry": round(entry_p, 2), "exit": round(exit_p, 2),
                             "pnl": round(pnl, 2), "pnl_pct": round(pnl_pct, 2),
                             "exit_reason": exit_reason, "verdict": sd_bt["verdict"],
+                            **{f"strat_{k.replace(' ','_')}": v for k,v in _strat_sigs.items()},
                         })
 
                 if not all_trades:
@@ -2580,9 +3028,59 @@ def tab_backtest():
 
         st.markdown("#### Trade Log")
         td_show = bt_results["trades"].copy()
-        td_show["pnl_pct"] = td_show["pnl_pct"].map(lambda x: f"{x:+.1f}%")
-        td_show["pnl"]     = td_show["pnl"].map(lambda x: f"₹{x:,.0f}")
-        st.dataframe(td_show, use_container_width=True)
+        _strat_cols_bt = [c for c in td_show.columns if c.startswith("strat_")]
+        _td_display    = td_show.drop(columns=_strat_cols_bt, errors="ignore").copy()
+        _td_display["pnl_pct"] = _td_display["pnl_pct"].map(lambda x: f"{x:+.1f}%")
+        _td_display["pnl"]     = _td_display["pnl"].map(lambda x: f"₹{x:,.0f}")
+        st.dataframe(_td_display, use_container_width=True)
+
+        # ── Per-Strategy Attribution ──────────────────────────────────────────
+        if _strat_cols_bt:
+            with st.expander("📊 Per-Strategy Attribution", expanded=True):
+                st.caption("Which strategies are most predictive? Rows = strategy, columns = signal given on trades.")
+                _attr_rows = []
+                for _sc in _strat_cols_bt:
+                    _sname = _sc.replace("strat_","").replace("_"," ")
+                    _sub_all = td_show[td_show[_sc].notna()]
+                    _sub_buy = _sub_all[_sub_all[_sc] == "BUY"]
+                    _sub_sel = _sub_all[_sub_all[_sc] == "SELL"]
+                    _buy_wins  = (_sub_buy["pnl"] > 0).sum()
+                    _buy_total = len(_sub_buy)
+                    _sell_wins = (_sub_sel["pnl"] > 0).sum()
+                    _sell_total= len(_sub_sel)
+                    _buy_wr  = f"{_buy_wins/_buy_total*100:.0f}% ({_buy_wins}/{_buy_total})" if _buy_total else "—"
+                    _sell_wr = f"{_sell_wins/_sell_total*100:.0f}% ({_sell_wins}/{_sell_total})" if _sell_total else "—"
+                    _avg_pnl = _sub_buy["pnl"].mean() if _buy_total else 0
+                    _attr_rows.append({
+                        "Strategy": _sname,
+                        "BUY signals": _buy_total,
+                        "BUY win rate": _buy_wr,
+                        "Avg P&L on BUY": f"₹{_avg_pnl:+,.0f}" if _buy_total else "—",
+                        "SELL signals": _sell_total,
+                        "SELL win rate": _sell_wr,
+                    })
+                if _attr_rows:
+                    st.dataframe(pd.DataFrame(_attr_rows), use_container_width=True, hide_index=True)
+
+                # Contribution bar chart
+                _contrib = []
+                for _sc in _strat_cols_bt:
+                    _sname2 = _sc.replace("strat_","").replace("_"," ")
+                    _buy_pnl = td_show[td_show[_sc]=="BUY"]["pnl"].sum()
+                    _contrib.append({"Strategy": _sname2, "Total P&L on BUY trades": _buy_pnl})
+                _cf_df = pd.DataFrame(_contrib).sort_values("Total P&L on BUY trades", ascending=True)
+                _fig_attr = go.Figure(go.Bar(
+                    x=_cf_df["Total P&L on BUY trades"], y=_cf_df["Strategy"],
+                    orientation="h",
+                    marker_color=[C["green"] if v >= 0 else C["red"]
+                                  for v in _cf_df["Total P&L on BUY trades"]]))
+                _fig_attr.update_layout(
+                    paper_bgcolor=C["bg"], plot_bgcolor=C["bg"],
+                    font=dict(color=C["text"]), height=220,
+                    margin=dict(l=130,r=10,t=10,b=30),
+                    xaxis_title="Total P&L (₹)",
+                    yaxis=dict(tickfont=dict(size=11)))
+                st.plotly_chart(_fig_attr, config={"displayModeBar":False}, key="attr_chart")
 
 
 # ── MAIN APP ───────────────────────────────────────────────────────────────────
