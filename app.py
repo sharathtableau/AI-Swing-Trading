@@ -830,7 +830,11 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
     is_entry=True  → strategy confluence filter applies for new entries.
     is_entry=False → strategies shown as info only, no verdict change (monitoring holds).
     """
-    l = df.iloc[-1]; p = df.iloc[-2]; r5 = df.tail(5)
+    l = df.iloc[-1].copy(); p = df.iloc[-2]; r5 = df.tail(5)
+    # Apply live price override — yfinance last-row close is yesterday's close during market hours.
+    # Without this, any intraday move (e.g. +8% today) is invisible to extended detection & entry logic.
+    if live_price > 0:
+        l["close"] = live_price
     support, resistance = find_sr(df)
     pattern  = candle_pattern(df)
     stage_code, stage_label = detect_stage(df)
