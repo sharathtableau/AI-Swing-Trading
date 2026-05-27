@@ -1058,10 +1058,12 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
     # its moving average. Detect this and change the verdict + entry to a
     # "wait for pullback" mode so users know NOT to chase.
     dist_ema21 = (cmp - ema21_val) / max(ema21_val, 0.01) * 100 if ema21_val > 0 else 0
+    # Extended if: clearly above EMA21 AND (RSI approaching overbought OR fast recent surge)
+    # RSI threshold is 65 not 70 — in a parabolic move RSI peaks around 65-75, not always >70
     is_extended = (
-        dist_ema21 > 8.0       # price >8% above EMA21 — over-stretched
-        and rsi > 70           # RSI in overbought territory
-        and recent_5d > 3.0    # fast recent surge (parabolic, not gradual)
+        dist_ema21 > 8.0                         # >8% above EMA21 — over-stretched
+        and (rsi > 65 or recent_5d > 5.0)        # RSI elevated OR big 5-day surge
+        and recent_5d > 3.0                      # some fast move required
     )
     if is_extended and is_entry and verdict in ("STRONG BUY", "WATCHLIST"):
         verdict = "EXTENDED – WAIT"
