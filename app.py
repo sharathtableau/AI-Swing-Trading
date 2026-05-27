@@ -1053,6 +1053,20 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
     bb_mid_v  = float(l.get("bb_mid", cmp) or cmp)
     breakout_trigger = 0.0   # stored separately as confirmation level
 
+    # ── Extended / Parabolic detection ────────────────────────────────────────
+    # A stock scoring high can still be dangerous to buy if it's too far above
+    # its moving average. Detect this and change the verdict + entry to a
+    # "wait for pullback" mode so users know NOT to chase.
+    dist_ema21 = (cmp - ema21_val) / max(ema21_val, 0.01) * 100 if ema21_val > 0 else 0
+    is_extended = (
+        dist_ema21 > 8.0       # price >8% above EMA21 — over-stretched
+        and rsi > 70           # RSI in overbought territory
+        and recent_5d > 3.0    # fast recent surge (parabolic, not gradual)
+    )
+    if is_extended and is_entry and verdict in ("STRONG BUY", "WATCHLIST"):
+        verdict = "EXTENDED – WAIT"
+        vcol    = C["amber"]
+
     if verdict=="STRONG BUY":
         # Wyckoff Spring on a STRONG BUY = highest-conviction institutional entry
         if spring_hit and spring_low > 0:
@@ -1102,6 +1116,13 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
         triggers = sorted([r for r in resistance if r > cmp*1.003])
         breakout_trigger = triggers[0] if triggers else round(cmp*1.02, 2)
 
+    elif verdict == "EXTENDED – WAIT":
+        # Stock is too extended to buy now — show where to enter on pullback
+        # Primary target: EMA21 zone (healthy first-pullback level in Stage 2)
+        entry  = round(ema21_val * 1.001, 2)
+        elabel = "Pullback Entry — wait for EMA21 zone"
+        breakout_trigger = 0.0
+
     else:
         entry  = round(cmp-0.5*adr, 2); elabel = "Entry (N/A)"
 
@@ -1119,12 +1140,17 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
 
     bb_pct = float((l["close"]-l["bb_lower"])/max(l["bb_upper"]-l["bb_lower"],0.01)*100)
 
-    # Entry zone: low = optimal demand-zone entry, high = acceptable chase limit
-    _zone_pct  = 0.018 if verdict == "STRONG BUY" else 0.025
-    entry_high = round(min(entry * (1 + _zone_pct), cmp * 0.997), 2)
-    if entry_high < entry + 0.50:      # gap < ₹0.50 — widen to just-below CMP
-        entry_high = round(cmp * 0.997, 2)
-    entry_high = max(entry_high, entry)
+    # Entry zone: low = optimal entry, high = acceptable upper limit
+    if verdict == "EXTENDED – WAIT":
+        # Show a ±1.5% band around EMA21 as the wait-for-pullback zone
+        entry_high = round(ema21_val * 1.015, 2) if ema21_val > 0 else round(entry * 1.015, 2)
+        entry_high = max(entry_high, entry)
+    else:
+        _zone_pct  = 0.018 if verdict == "STRONG BUY" else 0.025
+        entry_high = round(min(entry * (1 + _zone_pct), cmp * 0.997), 2)
+        if entry_high < entry + 0.50:      # gap < ₹0.50 — widen to just-below CMP
+            entry_high = round(cmp * 0.997, 2)
+        entry_high = max(entry_high, entry)
 
     return {
         "total":total,"raw":raw,"capped":capped,"l1":l1,"l2":l2,"l3":l3,
@@ -1145,6 +1171,7 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
         "spring_hit": spring_hit, "spring_label": spring_label, "spring_low": spring_low,
         "voldry_hit": voldry_hit, "voldry_label": voldry_label,
         "absorb_hit": absorb_hit, "absorb_label": absorb_label,
+        "is_extended": is_extended, "dist_ema21": round(dist_ema21, 1),
     }
 
 # ── CHART ──────────────────────────────────────────────────────────────────────
@@ -1663,7 +1690,11 @@ def _score_one(sym: str, nifty_ret: float = 0.0):
                 "Stage":sd.get("stage_label",""),"L1 Trend":sd["l1"],
                 "L2 Momentum":sd["l2"],"L3 Setup":sd["l3"],
                 "CMP":f"₹{sd['cmp']:,.2f}",
-                "Entry Zone":f"₹{tr['entry']:,.0f} – ₹{tr.get('entry_high', tr['entry']):,.0f}",
+                "Entry Zone": (
+                    f"⏳ Wait ₹{tr['entry']:,.0f}–₹{tr.get('entry_high',tr['entry']):,.0f}"
+                    if sd.get("is_extended") else
+                    f"₹{tr['entry']:,.0f} – ₹{tr.get('entry_high', tr['entry']):,.0f}"
+                ),
                 "SL":f"₹{tr['sl']:,.2f}","R:R":f"{tr['rr']}x",
                 "RS Raw": round(rs_raw, 1),
                 "Weekly": mtf["signal"],
@@ -1908,7 +1939,7 @@ def tab_analyse(stocks_df, capital):
             _sx = [h["ts"]    for h in _hist]
             _sy = [h["score"] for h in _hist]
             _sc = [C["green"] if h["verdict"]=="STRONG BUY" else
-                   (C["amber"] if h["verdict"]=="WATCHLIST" else C["red"]) for h in _hist]
+                   (C["amber"] if h["verdict"] in ("WATCHLIST","EXTENDED – WAIT") else C["red"]) for h in _hist]
             _fig_sp = go.Figure(go.Scatter(x=_sx, y=_sy, mode="lines+markers",
                 line=dict(color=C["blue"], width=1.5),
                 marker=dict(color=_sc, size=5)))
@@ -1930,7 +1961,8 @@ def tab_analyse(stocks_df, capital):
 
     with c3:
         tr = sd["trade"]
-        entry_col  = C["blue"] if sd["verdict"]=="STRONG BUY" else (C["amber"] if sd["verdict"]=="WATCHLIST" else C["dim"])
+        entry_col  = (C["blue"]  if sd["verdict"]=="STRONG BUY" else
+                      C["amber"] if sd["verdict"] in ("WATCHLIST","EXTENDED – WAIT") else C["dim"])
         stage_col  = C["green"] if sd.get("stage")=="2" else (C["amber"] if "1→2" in str(sd.get("stage","")) else C["red"])
         vcp_badge  = (f"<span style='background:{hex_rgba(C['green'],0.15)};color:{C['green']};"
                       f"border:1px solid {C['green']}40;border-radius:4px;padding:1px 7px;font-size:11px'>VCP ✓</span>"
@@ -1989,6 +2021,36 @@ def tab_analyse(stocks_df, capital):
                     f"{kpi_row('Position Size', f'{pos_size} shares', C['blue'])}"
                     f"{kpi_row('Position Value', f'₹{pos_value:,.0f}', C['text'])}"
                     f"</div>", unsafe_allow_html=True)
+
+    # ── Extended / Parabolic Warning Banner ───────────────────────────────────
+    if sd.get("is_extended"):
+        _dist    = sd.get("dist_ema21", 0)
+        _pb_low  = sd["trade"]["entry"]
+        _pb_high = sd["trade"].get("entry_high", _pb_low)
+        _rsi_v   = sd.get("rsi", 0)
+        _ca = C["amber"]; _cg = C["green"]; _ct = C["text"]; _cm = C["muted"]
+        st.markdown(
+            f"<div style='background:{hex_rgba(_ca,0.12)};border:2px solid {_ca};"
+            f"border-radius:12px;padding:16px 20px;margin:10px 0 16px'>"
+            f"<div style='font-family:JetBrains Mono,monospace;font-size:16px;"
+            f"font-weight:700;color:{_ca}'>⛔ EXTENDED — DO NOT BUY AT CURRENT PRICE</div>"
+            f"<div style='font-family:DM Sans,sans-serif;font-size:13px;"
+            f"color:{_ct};margin-top:8px;line-height:1.7'>"
+            f"This stock is <b>{_dist:.1f}%</b> above its EMA21 with RSI at <b>{_rsi_v:.0f}</b> — "
+            f"it is parabolic/over-extended. Buying here is chasing the move. "
+            f"Smart money does <b>not</b> enter at this stage.</div>"
+            f"<div style='font-family:DM Sans,sans-serif;font-size:13px;"
+            f"color:{_cg};margin-top:10px;font-weight:600'>"
+            f"✅ Wait for a pullback to the EMA21 zone: "
+            f"<span style='font-family:JetBrains Mono,monospace'>"
+            f"₹{_pb_low:,.2f} – ₹{_pb_high:,.2f}</span></div>"
+            f"<div style='font-family:DM Sans,sans-serif;font-size:12px;"
+            f"color:{_cm};margin-top:6px'>"
+            f"The score reflects the stock quality — it IS a strong stock. "
+            f"The verdict tells you the action: wait. "
+            f"Set a price alert at ₹{_pb_high:,.2f} and revisit when price reaches that zone."
+            f"</div></div>",
+            unsafe_allow_html=True)
 
     # Chart
     st.markdown("<hr>", unsafe_allow_html=True)
@@ -2322,7 +2384,7 @@ def tab_watchlist():
                 _sd2 = st.session_state.get(f"wl_sd_{_itm2['symbol']}")
                 if _sd2:
                     _v2 = _sd2["verdict"]; _t2 = _sd2["total"]
-                    _ico2 = "🟢" if _v2=="STRONG BUY" else ("🟡" if _v2=="WATCHLIST" else "🔴")
+                    _ico2 = "🟢" if _v2=="STRONG BUY" else ("🟡" if _v2 in ("WATCHLIST","EXTENDED – WAIT") else "🔴")
                     _msg_lines.append(f"{_ico2} *{_itm2['symbol']}* — {_t2}/100 {_v2}")
             _send_telegram(_tg_tok2, _tg_ch2, "\n".join(_msg_lines))
             st.success("Telegram alert sent!")
@@ -2372,11 +2434,18 @@ def tab_watchlist():
                 f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>{cmp_name[:22]}</div>",
                 unsafe_allow_html=True)
         with h2:
+            _ext_badge = (
+                f"<div style='font-size:10px;font-family:DM Sans;color:{C['amber']};"
+                f"background:{hex_rgba(C['amber'],0.15)};border:1px solid {hex_rgba(C['amber'],0.5)};"
+                f"border-radius:4px;padding:2px 6px;margin-top:3px;display:inline-block'>"
+                f"⛔ PARABOLIC — {sd_w.get('dist_ema21',0):.1f}% above EMA21</div>"
+            ) if v == "EXTENDED – WAIT" else ""
             st.markdown(
                 f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Score</div>"
                 f"<div style='font-family:JetBrains Mono,monospace;font-size:20px;"
                 f"font-weight:700;color:{vc}'>{tot}</div>"
-                f"<div style='font-size:11px;font-weight:600;color:{vc};font-family:DM Sans'>{v}</div>",
+                f"<div style='font-size:11px;font-weight:600;color:{vc};font-family:DM Sans'>{v}</div>"
+                f"{_ext_badge}",
                 unsafe_allow_html=True)
         with h3:
             st.markdown(
@@ -3185,21 +3254,18 @@ def tab_backtest(stocks_df):
 
         # ── Per-Strategy Attribution ──────────────────────────────────────────
         if _strat_cols_bt:
-            with st.expander("📊 Per-Strategy Attribution", expanded=True):
-                st.caption("Which strategies are most predictive? Rows = strategy, columns = signal given on trades.")
+            with st.expander("📊 Per-Strategy Attribution", expanded=False):
                 _attr_rows = []
                 for _sc in _strat_cols_bt:
-                    _sname = _sc.replace("strat_","").replace("_"," ")
-                    _sub_all = td_show[td_show[_sc].notna()]
-                    _sub_buy = _sub_all[_sub_all[_sc] == "BUY"]
-                    _sub_sel = _sub_all[_sub_all[_sc] == "SELL"]
-                    _buy_wins  = (_sub_buy["pnl"] > 0).sum()
-                    _buy_total = len(_sub_buy)
-                    _sell_wins = (_sub_sel["pnl"] > 0).sum()
-                    _sell_total= len(_sub_sel)
-                    _buy_wr  = f"{_buy_wins/_buy_total*100:.0f}% ({_buy_wins}/{_buy_total})" if _buy_total else "—"
-                    _sell_wr = f"{_sell_wins/_sell_total*100:.0f}% ({_sell_wins}/{_sell_total})" if _sell_total else "—"
-                    _avg_pnl = _sub_buy["pnl"].mean() if _buy_total else 0
+                    _sname = _sc.replace("strat_","").replace("_"," ").title()
+                    _sub_all  = td_show[td_show[_sc].notna() & (td_show[_sc] != "NEUTRAL")]
+                    _sub_buy  = _sub_all[_sub_all[_sc] == "BUY"]
+                    _sub_sell = _sub_all[_sub_all[_sc] == "SELL"]
+                    _buy_total  = len(_sub_buy)
+                    _sell_total = len(_sub_sell)
+                    _buy_wr  = f"{(_sub_buy['pnl_pct'] > 0).mean()*100:.0f}%" if _buy_total  else "—"
+                    _sell_wr = f"{(_sub_sell['pnl_pct'] > 0).mean()*100:.0f}%" if _sell_total else "—"
+                    _avg_pnl = float(_sub_buy["pnl"].mean()) if _buy_total else 0
                     _attr_rows.append({
                         "Strategy": _sname,
                         "BUY signals": _buy_total,
@@ -3209,9 +3275,7 @@ def tab_backtest(stocks_df):
                         "SELL win rate": _sell_wr,
                     })
                 if _attr_rows:
-                    st.dataframe(pd.DataFrame(_attr_rows), use_container_width=True, hide_index=True)
-
-                # Contribution bar chart
+                    st.dataframe(pd.DataFrame(_attr_rows), use_container_width=True)
                 _contrib = []
                 for _sc in _attr_rows:
                     _buy_wr_n  = float(_sc["BUY win rate"].split("%")[0])  if "%" in str(_sc["BUY win rate"])  else 0
