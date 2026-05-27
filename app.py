@@ -2062,6 +2062,17 @@ def tab_analyse(stocks_df, capital):
                f"⬇ Verdict downgraded · {_dr}</div>") if c_down and _dr else (
                f"<div style='font-size:11px;color:{C['amber']};margin-top:6px;font-family:DM Sans'>"
                f"⬇ Verdict downgraded due to conflicting signals</div>") if c_down else ""
+        # Footnote: list each SELL strategy + its reason so the user sees exactly what fired
+        _sell_strats = [(sn, sd["reason"]) for sn, sd in strats_d.items() if sd.get("signal") == "SELL"]
+        _sell_banner = ""
+        if _sell_strats:
+            _sell_items = "  ·  ".join(f"<b>{sn}</b>: {sr}" for sn, sr in _sell_strats)
+            _sell_banner = (
+                f"<div style='font-size:11px;color:{C['amber']};font-family:DM Sans;"
+                f"margin-top:5px;line-height:1.5'>"
+                f"⚠️ SELL signal(s) — {_sell_items}"
+                f"<span style='color:{C['dim']}'> (counter-trend; does not negate the score)</span></div>"
+            )
         st.markdown(
             f"<div style='background:{hex_rgba(agg_col,0.10)};border:2px solid {hex_rgba(agg_col,0.5)};"
             f"border-radius:12px;padding:14px 20px;margin-bottom:14px;display:flex;align-items:center;gap:16px'>"
@@ -2069,7 +2080,7 @@ def tab_analyse(stocks_df, capital):
             f"<div><div style='font-family:JetBrains Mono,monospace;font-size:18px;font-weight:700;color:{agg_col}'>"
             f"Strategy Confluence: {buy_c}/{n_s} BUY · {sell_c}/{n_s} SELL</div>"
             f"<div style='font-family:DM Sans,sans-serif;font-size:13px;color:{C['muted']};margin-top:2px'>"
-            f"{_cons}</div>{_dh}</div></div>",
+            f"{_cons}</div>{_sell_banner}{_dh}</div></div>",
             unsafe_allow_html=True)
 
         st.markdown(
@@ -2377,10 +2388,21 @@ def tab_watchlist():
                 unsafe_allow_html=True)
         with h4:
             conf_col = C["green"] if bc >= 3 else (C["amber"] if bc >= 2 else C["red"])
+            # Build per-strategy SELL footnote so user knows which strategy fired SELL
+            _strats_w   = sd_w.get("strats", {})
+            _sell_parts = [f"{_sn}: {_ss.get('reason','')}"
+                           for _sn, _ss in _strats_w.items()
+                           if _ss.get("signal") == "SELL"]
+            _sell_note  = (
+                f"<div style='font-size:10px;color:{C['amber']};font-family:DM Sans;"
+                f"margin-top:3px;line-height:1.4'>"
+                f"⚠️ SELL — {'  ·  '.join(_sell_parts)}</div>"
+            ) if _sell_parts else ""
             st.markdown(
                 f"<div style='font-size:11px;color:{C['muted']};font-family:DM Sans'>Strategy Confluence</div>"
                 f"<div style='font-size:14px;font-weight:700;color:{conf_col};font-family:JetBrains Mono'>"
                 f"{bc}/5 BUY · {sc_cnt}/5 SELL</div>"
+                f"{_sell_note}"
                 f"<div style='font-size:10px;color:{C['muted']};font-family:DM Sans;margin-top:2px'>"
                 f"T1 ₹{tr['t1']:,.2f}  ·  R:R {tr['rr']}x</div>",
                 unsafe_allow_html=True)
@@ -3217,21 +3239,22 @@ def tab_backtest(stocks_df):
                     )
                     st.plotly_chart(_fig_attr, config={"displayModeBar": False}, key="attr_chart")
 
+
 # ── MAIN ──────────────────────────────────────────────────────────────────────
 def main():
     _init_state()
     stocks_df = load_nse_stocks()
     capital, risk_pct, max_pos, max_sl_pct, tg_token, tg_chat = render_sidebar()
     t_an, t_sc, t_wl, t_hd, t_pf, t_back = st.tabs([
-        "Analyse", "Screener", "Watchlist",
-        "Holdings", "Portfolio", "Backtest",
+        "\U0001f50d Analyse", "\U0001f4ca Screener", "\U0001f4cc Watchlist",
+        "\U0001f4bc Holdings", "\U0001f4c8 Portfolio", "\U0001f9ea Backtest"
     ])
-    with t_an:   tab_analyse(stocks_df, capital)
+    with t_an:   tab_analyse(capital, risk_pct, max_sl_pct)
     with t_sc:   tab_screener(stocks_df)
-    with t_wl:   tab_watchlist()
+    with t_wl:   tab_watchlist(capital, risk_pct, max_sl_pct)
     with t_hd:   tab_holdings()
-    with t_pf:   tab_portfolio(capital, risk_pct, tg_token, tg_chat)
-    with t_back: tab_backtest(stocks_df)
+    with t_pf:   tab_portfolio()
+    with t_back: tab_backtest()
 
-# ── Entry point — called directly so Streamlit Cloud always executes it ──────
+
 main()
