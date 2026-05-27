@@ -3246,15 +3246,15 @@ def main():
     stocks_df = load_nse_stocks()
     capital, risk_pct, max_pos, max_sl_pct, tg_token, tg_chat = render_sidebar()
     t_an, t_sc, t_wl, t_hd, t_pf, t_back = st.tabs([
-        "\U0001f50d Analyse", "\U0001f4ca Screener", "\U0001f4cc Watchlist",
-        "\U0001f4bc Holdings", "\U0001f4c8 Portfolio", "\U0001f9ea Backtest"
+        "🔍 Analyse", "📊 Screener", "📌 Watchlist",
+        "💼 Holdings", "📈 Portfolio", "🧪 Backtest"
     ])
-    with t_an:   tab_analyse(capital, risk_pct, max_sl_pct)
+    with t_an:   tab_analyse(stocks_df, capital)
     with t_sc:   tab_screener(stocks_df)
-    with t_wl:   tab_watchlist(capital, risk_pct, max_sl_pct)
+    with t_wl:   tab_watchlist()
     with t_hd:   tab_holdings()
-    with t_pf:   tab_portfolio()
-    with t_back: tab_backtest()
+    with t_pf:   tab_portfolio(capital, risk_pct, tg_token, tg_chat)
+    with t_back: tab_backtest(stocks_df)
 
 
 main()
