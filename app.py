@@ -284,26 +284,36 @@ def fetch_sector_rotation(short: int = 21, long: int = 63) -> pd.DataFrame:
     import patterns
     tickers = list(config.UNIVERSE)          # already SYMBOL.NS, matches SECTOR_MAP keys
     closes: dict = {}
-    CHUNK = 80
+    CHUNK = 50
     for i in range(0, len(tickers), CHUNK):
         grp = tickers[i:i + CHUNK]
-        try:
-            raw = yf.download(grp, period="6mo", interval="1d", progress=False,
-                              auto_adjust=True, group_by="ticker", threads=True)
-        except Exception:
-            continue
+        raw = None
+        for _attempt in range(2):            # one retry on transient Yahoo failures
+            try:
+                raw = yf.download(grp, period="6mo", interval="1d", progress=False,
+                                  auto_adjust=True, threads=True)
+                if raw is not None and not raw.empty:
+                    break
+            except Exception:
+                raw = None
         if raw is None or raw.empty:
             continue
-        for t in grp:
-            try:
-                if isinstance(raw.columns, pd.MultiIndex):
-                    s = raw[t]["Close"].dropna()
-                else:
-                    s = raw["Close"].dropna()
-                if len(s) > long:
-                    closes[t] = s
-            except Exception:
+        # Default (no group_by) gives columns = MultiIndex(field, ticker); for a
+        # single surviving ticker it collapses to a plain (field) index.
+        if isinstance(raw.columns, pd.MultiIndex):
+            if "Close" not in raw.columns.get_level_values(0):
                 continue
+            close_df = raw["Close"]
+            for t in grp:
+                if t in close_df.columns:
+                    s = close_df[t].dropna()
+                    if len(s) > long:
+                        closes[t] = s
+        else:
+            if "Close" in raw.columns:
+                s = raw["Close"].dropna()
+                if len(s) > long and len(grp) == 1:
+                    closes[grp[0]] = s
     if not closes:
         return pd.DataFrame()
     stock_data = {t: pd.DataFrame({"close": s}) for t, s in closes.items()}
@@ -2379,8 +2389,13 @@ def render_sector_rotation():
                      expanded=False):
         cL, _cR = st.columns([1, 4])
         if cL.button("↻ Load / Refresh", key="sec_rot_btn"):
-            with st.spinner("Measuring sector strength across the universe…"):
+            fetch_sector_rotation.clear()          # force a true refetch, ignore cache
+            with st.spinner("Measuring sector strength across the universe (~1 min)…"):
                 st.session_state["sector_rot"] = fetch_sector_rotation()
+            _r = st.session_state["sector_rot"]
+            if not isinstance(_r, pd.DataFrame) or _r.empty:
+                st.warning("Couldn't fetch price data from Yahoo just now (rate-limited or "
+                           "no response). Wait a few seconds and click Load / Refresh again.")
         df = st.session_state.get("sector_rot", pd.DataFrame())
         if not isinstance(df, pd.DataFrame) or df.empty:
             st.caption("Click **Load / Refresh** to rank every NSE sector by relative "
