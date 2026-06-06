@@ -273,6 +273,43 @@ def fetch_nifty_3m_return() -> float:
     except Exception:
         return 0.0
 
+@st.cache_data(ttl=3600, show_spinner=False)
+def fetch_sector_rotation(short: int = 21, long: int = 63) -> pd.DataFrame:
+    """Bottom-up sector rotation: median relative strength per sector vs Nifty.
+
+    Batch-downloads ~6 months of daily closes for the whole universe (chunked),
+    then defers to patterns.sector_strength for the RS math. Cached 1 hour.
+    Returns an empty DataFrame if data can't be fetched.
+    """
+    import patterns
+    tickers = list(config.UNIVERSE)          # already SYMBOL.NS, matches SECTOR_MAP keys
+    closes: dict = {}
+    CHUNK = 80
+    for i in range(0, len(tickers), CHUNK):
+        grp = tickers[i:i + CHUNK]
+        try:
+            raw = yf.download(grp, period="6mo", interval="1d", progress=False,
+                              auto_adjust=True, group_by="ticker", threads=True)
+        except Exception:
+            continue
+        if raw is None or raw.empty:
+            continue
+        for t in grp:
+            try:
+                if isinstance(raw.columns, pd.MultiIndex):
+                    s = raw[t]["Close"].dropna()
+                else:
+                    s = raw["Close"].dropna()
+                if len(s) > long:
+                    closes[t] = s
+            except Exception:
+                continue
+    if not closes:
+        return pd.DataFrame()
+    stock_data = {t: pd.DataFrame({"close": s}) for t, s in closes.items()}
+    rows = patterns.sector_strength(stock_data, fetch_index(), short=short, long=long)
+    return pd.DataFrame(rows)
+
 
 # ── MTF · RS RATING · EARNINGS · AVWAP UTILITIES ───────────────────────────────
 
@@ -2335,6 +2372,49 @@ def tab_analyse(stocks_df, capital):
                     f"</div>", unsafe_allow_html=True)
 
 
+# ── SECTOR ROTATION PANEL ───────────────────────────────────────────────────────
+def render_sector_rotation():
+    """Which sectors lead/lag the market now — so you scan the hot ones first."""
+    with st.expander("📊 Sector Rotation — where money is flowing (relative strength vs Nifty)",
+                     expanded=False):
+        cL, _cR = st.columns([1, 4])
+        if cL.button("↻ Load / Refresh", key="sec_rot_btn"):
+            with st.spinner("Measuring sector strength across the universe…"):
+                st.session_state["sector_rot"] = fetch_sector_rotation()
+        df = st.session_state.get("sector_rot", pd.DataFrame())
+        if not isinstance(df, pd.DataFrame) or df.empty:
+            st.caption("Click **Load / Refresh** to rank every NSE sector by relative "
+                       "strength vs the Nifty over the last 1–3 months. Green = leading "
+                       "(scan these first), red = lagging (avoid). Cached for 1 hour.")
+            return
+        # Expose status map for the screener tag + 'only leading sectors' filter
+        st.session_state["sector_status"] = dict(zip(df["sector"], df["status"]))
+        _cmap = {"Leading": C["green"], "Neutral": C["amber"], "Lagging": C["red"]}
+        dsort = df.sort_values("score")
+        fig = go.Figure(go.Bar(
+            x=dsort["score"], y=dsort["sector"], orientation="h",
+            marker_color=[_cmap.get(s, C["muted"]) for s in dsort["status"]],
+            text=[f"{v:+.1f}%" for v in dsort["score"]], textposition="outside",
+            hovertext=[f"{r.sector}: RS {r.score:+.1f}%  (1m {r.rs_s:+.1f}, 3m {r.rs_l:+.1f}) · {r.n} names"
+                       for r in dsort.itertuples()], hoverinfo="text"))
+        fig.update_layout(
+            height=max(280, 22 * len(dsort) + 80), margin=dict(l=8, r=8, t=10, b=10),
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(family="DM Sans", color=C["text"], size=11),
+            xaxis=dict(title="Relative strength vs Nifty (%)", zeroline=True,
+                       zerolinecolor=C["muted"], gridcolor=hex_rgba(C["muted"], 0.15)),
+            yaxis=dict(automargin=True))
+        st.plotly_chart(fig, config={"displayModeBar": False},
+                        use_container_width=True, key="sec_rot_chart")
+        lead = ", ".join(df[df["status"] == "Leading"]["sector"].tolist())
+        lag  = ", ".join(df[df["status"] == "Lagging"]["sector"].tolist())
+        st.markdown(
+            f"<p style='font-family:DM Sans;font-size:12px;color:{C['muted']};margin-top:4px'>"
+            f"<b style='color:{C['green']}'>Leading:</b> {lead or '—'} &nbsp;·&nbsp; "
+            f"<b style='color:{C['red']}'>Lagging:</b> {lag or '—'}</p>",
+            unsafe_allow_html=True)
+
+
 # ── TAB: SCREENER ──────────────────────────────────────────────────────────────
 def tab_screener(stocks_df):
     st.markdown(
@@ -2342,6 +2422,8 @@ def tab_screener(stocks_df):
         f"Scan any basket of NSE stocks in parallel and rank by swing score. "
         f"75+ = Strong Buy &nbsp;|&nbsp; 55–74 = Watchlist.</p>",
         unsafe_allow_html=True)
+
+    render_sector_rotation()
 
     all_nse = stocks_df["symbol"].tolist()
     basket_options = list(SCREENER_LISTS.keys()) + ["All NSE Listed (~2000 stocks)"]
@@ -2359,13 +2441,18 @@ def tab_screener(stocks_df):
         st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
         buy_filter = st.checkbox("3+ BUY signals only", value=False, key="scr_buy_filter",
                                  help="Show only stocks where 3 or more of the 5 strategies agree on BUY")
-    scr_c5, scr_c6 = st.columns([2, 2])
+    scr_c5, scr_c6, scr_c7 = st.columns([2, 2, 1.6])
     with scr_c5:
         sector_filter = st.selectbox("Sector Filter", all_sectors, key="scr_sector",
                                      help="Filter results by sector")
     with scr_c6:
         weekly_filter = st.selectbox("Weekly Trend", ["All", "BULLISH only", "Not BEARISH"],
                                      key="scr_weekly", help="Filter by multi-timeframe weekly signal")
+    with scr_c7:
+        st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+        only_leading = st.checkbox("Leading sectors only", value=False, key="scr_only_lead",
+                                   help="Keep only stocks in sectors currently leading the "
+                                        "market. Load the Sector Rotation panel above first.")
 
     custom_input = st.text_input("Custom symbols (comma-separated)",
                                  placeholder="e.g. ZOMATO, IRFC, SUZLON", key="scr_custom")
@@ -2408,6 +2495,14 @@ def tab_screener(stocks_df):
             filtered = filtered[filtered["Buy Signals"] >= 3].copy()
         if sector_filter != "All Sectors" and "Sector" in filtered.columns:
             filtered = filtered[filtered["Sector"] == sector_filter].copy()
+        _sec_status = st.session_state.get("sector_status", {})
+        if _sec_status and "Sector" in filtered.columns:
+            filtered["Sector Trend"] = filtered["Sector"].map(
+                lambda s: _sec_status.get(s, "Neutral"))
+            if only_leading:
+                filtered = filtered[filtered["Sector Trend"] == "Leading"].copy()
+        elif only_leading:
+            st.info("Load the Sector Rotation panel above first to use the leading-sectors filter.")
         if weekly_filter == "BULLISH only" and "Weekly" in filtered.columns:
             filtered = filtered[filtered["Weekly"] == "BULLISH"].copy()
         elif weekly_filter == "Not BEARISH" and "Weekly" in filtered.columns:
@@ -2434,7 +2529,7 @@ def tab_screener(stocks_df):
         # Editable table with star column for bulk add
         filtered["⭐"] = False
         display_cols = ["⭐","Symbol","Verdict","Score","RS Rating","Weekly","L1 Trend","L2 Momentum",
-                        "L3 Setup","CMP","Entry Zone","SL","R:R","Buy Signals","Confluence","WL","Sector"]
+                        "L3 Setup","CMP","Entry Zone","SL","R:R","Buy Signals","Confluence","WL","Sector","Sector Trend"]
         avail_cols   = [c for c in display_cols if c in filtered.columns]
         edited = st.data_editor(
             filtered[avail_cols].reset_index(drop=True),
