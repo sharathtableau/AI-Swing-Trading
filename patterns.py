@@ -309,6 +309,71 @@ def rank_sectors(stock_data: dict, lookback: int = 63) -> dict:
     return {s: rank for rank, (s, _) in enumerate(ranked, 1)}
 
 
+def sector_strength(stock_data: dict, index_df=None,
+                    short: int = 21, long: int = 63, min_names: int = 3) -> list:
+    """Relative-strength sector rotation table (strongest sector first).
+
+    For each sector, take the MEDIAN % return of its stocks over a short
+    (~1 month) and long (~3 month) window, then subtract the index return over
+    the same window to get relative strength (RS). A positive RS means the
+    sector is beating the market — the actual rotation signal.
+
+    Returns a list of dicts (sorted by score, strongest first):
+      {sector, n, ret_s, ret_l, rs_s, rs_l, score, status, rank}
+    where score = 0.4*rs_s + 0.6*rs_l, and status is Leading / Neutral /
+    Lagging (top / middle / bottom tertile). Sectors with fewer than
+    `min_names` stocks are skipped so a single name can't define a sector.
+    """
+    def _ret(close, n):
+        if close is None or len(close) <= n:
+            return None
+        a, b = float(close.iloc[-1]), float(close.iloc[-n - 1])
+        return None if b == 0 else (a - b) / b * 100.0
+
+    idx_s = idx_l = 0.0
+    if index_df is not None and not index_df.empty and "close" in index_df:
+        ic = index_df["close"].dropna()
+        idx_s = _ret(ic, short) or 0.0
+        idx_l = _ret(ic, long) or 0.0
+
+    buckets: dict = {}
+    for symbol, df in stock_data.items():
+        sector = config.SECTOR_MAP.get(symbol, "Unknown")
+        if sector in ("Unknown", "") or df is None or "close" not in df:
+            continue
+        c = df["close"].dropna()
+        rs, rl = _ret(c, short), _ret(c, long)
+        if rs is None or rl is None:
+            continue
+        b = buckets.setdefault(sector, {"s": [], "l": []})
+        b["s"].append(rs)
+        b["l"].append(rl)
+
+    rows = []
+    for sec, v in buckets.items():
+        if len(v["l"]) < min_names:
+            continue
+        ret_s, ret_l = float(np.median(v["s"])), float(np.median(v["l"]))
+        rs_s, rs_l = ret_s - idx_s, ret_l - idx_l
+        rows.append({"sector": sec, "n": len(v["l"]),
+                     "ret_s": round(ret_s, 2), "ret_l": round(ret_l, 2),
+                     "rs_s": round(rs_s, 2), "rs_l": round(rs_l, 2),
+                     "score": round(0.4 * rs_s + 0.6 * rs_l, 2)})
+
+    rows.sort(key=lambda r: r["score"], reverse=True)
+    n = len(rows)
+    cut = max(1, n // 3) if n >= 3 else 0
+    for i, r in enumerate(rows):
+        if cut and i < cut:
+            r["status"] = "Leading"
+        elif cut and i >= n - cut:
+            r["status"] = "Lagging"
+        else:
+            r["status"] = "Neutral"
+        r["rank"] = i + 1
+    return rows
+
+
 # ─── Combined ─────────────────────────────────────────────────────────────────
 
 def compute_all_patterns(df: pd.DataFrame, index_df: pd.DataFrame) -> pd.DataFrame:
