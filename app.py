@@ -274,49 +274,43 @@ def fetch_nifty_3m_return() -> float:
         return 0.0
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_sector_rotation(short: int = 21, long: int = 63) -> pd.DataFrame:
+def fetch_sector_rotation(short: int = 21, long: int = 63,
+                          per_sector: int = 12) -> pd.DataFrame:
     """Bottom-up sector rotation: median relative strength per sector vs Nifty.
 
-    Batch-downloads ~6 months of daily closes for the whole universe (chunked),
-    then defers to patterns.sector_strength for the RS math. Cached 1 hour.
-    Returns an empty DataFrame if data can't be fetched.
+    Yahoo rate-limits BULK downloads on Streamlit Cloud, but single-ticker
+    downloads (the path the screener already uses) work fine. So we sample up to
+    `per_sector` names per sector and pull each through the cached fetch_ohlcv,
+    threaded — the same proven pattern as run_screener. Cached 1 hour. Returns an
+    empty DataFrame only if every fetch fails.
     """
     import patterns
-    tickers = list(config.UNIVERSE)          # already SYMBOL.NS, matches SECTOR_MAP keys
-    closes: dict = {}
-    CHUNK = 50
-    for i in range(0, len(tickers), CHUNK):
-        grp = tickers[i:i + CHUNK]
-        raw = None
-        for _attempt in range(2):            # one retry on transient Yahoo failures
-            try:
-                raw = yf.download(grp, period="6mo", interval="1d", progress=False,
-                                  auto_adjust=True, threads=True)
-                if raw is not None and not raw.empty:
-                    break
-            except Exception:
-                raw = None
-        if raw is None or raw.empty:
+    # Group the universe by sector, then cap each sector to a representative sample
+    # so first load stays bounded (a median needs only a handful of names).
+    by_sector: dict = {}
+    for t in config.UNIVERSE:                 # SYMBOL.NS, matches SECTOR_MAP keys
+        sec = config.SECTOR_MAP.get(t, "Unknown")
+        if sec in ("Unknown", ""):
             continue
-        # Default (no group_by) gives columns = MultiIndex(field, ticker); for a
-        # single surviving ticker it collapses to a plain (field) index.
-        if isinstance(raw.columns, pd.MultiIndex):
-            if "Close" not in raw.columns.get_level_values(0):
-                continue
-            close_df = raw["Close"]
-            for t in grp:
-                if t in close_df.columns:
-                    s = close_df[t].dropna()
-                    if len(s) > long:
-                        closes[t] = s
-        else:
-            if "Close" in raw.columns:
-                s = raw["Close"].dropna()
-                if len(s) > long and len(grp) == 1:
-                    closes[grp[0]] = s
-    if not closes:
+        by_sector.setdefault(sec, []).append(t)
+    sample = [t for ts in by_sector.values() for t in ts[:per_sector]]
+
+    def _one(ticker: str):
+        try:
+            base = ticker[:-3] if ticker.endswith(".NS") else ticker
+            d = fetch_ohlcv(base)             # cached single-ticker fetch (works on cloud)
+            return ticker, d
+        except Exception:
+            return ticker, None
+
+    stock_data: dict = {}
+    with ThreadPoolExecutor(max_workers=20) as ex:
+        for fut in as_completed([ex.submit(_one, t) for t in sample]):
+            ticker, d = fut.result()
+            if d is not None and "close" in d and len(d) > long:
+                stock_data[ticker] = d
+    if not stock_data:
         return pd.DataFrame()
-    stock_data = {t: pd.DataFrame({"close": s}) for t, s in closes.items()}
     rows = patterns.sector_strength(stock_data, fetch_index(), short=short, long=long)
     return pd.DataFrame(rows)
 
