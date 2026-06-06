@@ -14,6 +14,7 @@ from io import StringIO
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
+import config   # shared trade-risk parameters — keeps the live score in sync with the backtest engine
 
 st.set_page_config(page_title="NSE Swing Trader", page_icon="📈",
                    layout="wide", initial_sidebar_state="expanded")
@@ -227,7 +228,20 @@ def fetch_live_price(symbol: str) -> dict:
         t = yf.Ticker(symbol + ".NS")
         fi = t.fast_info
         price = float(fi.last_price)
-        prev  = float(fi.previous_close)
+        # yfinance fast_info.previous_close is unreliable (often returns a 2-day-
+        # old close), which inflates the change %. Take the true prior-session
+        # close from the daily bars: during market hours the last bar is today's
+        # forming candle, so close[-2] is yesterday's actual close.
+        prev = None
+        try:
+            hist = t.history(period="5d")
+            closes = hist["Close"].dropna()
+            if len(closes) >= 2:
+                prev = float(closes.iloc[-2])
+        except Exception:
+            prev = None
+        if prev is None:
+            prev = float(fi.previous_close)
         chg   = round(price - prev, 2)
         pct   = round(chg / prev * 100, 2)
         return {"price": price, "change": chg, "pct": pct}
@@ -833,6 +847,12 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
     l = df.iloc[-1].copy(); p = df.iloc[-2]; r5 = df.tail(5)
     # Apply live price override — yfinance last-row close is yesterday's close during market hours.
     # Without this, any intraday move (e.g. +8% today) is invisible to extended detection & entry logic.
+    # BOUNDARY CAVEAT: only `close` is replaced with the live tick. Every other field in this row
+    # (rsi, macd, ema8/13/21, atr, adr5, st_dir, vol_ratio, support/resistance) is still the EOD
+    # value, so during market hours those indicators lag the live price by one session. The backtest
+    # never sees this mix — it runs purely on completed EOD bars — so an intraday live score is an
+    # approximation of the validated signal, not an identical one. Treat intraday verdicts as
+    # provisional until the daily candle closes.
     if live_price > 0:
         l["close"] = live_price
     support, resistance = find_sr(df)
@@ -1144,6 +1164,39 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
     t3 = round(entry+1.50*mdr, 2)
     rr = round((t1-entry)/max(entry-sl, 0.01), 2)
 
+    # ── Backtest-parity risk gate (new entries only) ──────────────────────────
+    # Keep the live verdict consistent with what the *backtested* engine would
+    # actually trade. signals._valid_trade hard-rejects any setup whose stop is
+    # wider than config.MAX_SL_PERCENT or whose reward:risk is below
+    # config.MIN_RISK_REWARD, and _passes_screener requires 3-month relative
+    # strength above the index. Without this gate the app could flash STRONG BUY
+    # on a setup the validated engine would never have entered — i.e. what you
+    # trade ≠ what was tested. R:R here is measured to the furthest target (t3)
+    # to match the full-move MDR target basis the backtest assumes, so we don't
+    # falsely reject good setups on the nearer t1.
+    if is_entry and verdict in ("STRONG BUY", "WATCHLIST") and entry > 0:
+        risk_ps = max(entry - sl, 0.01)
+        sl_pct  = (entry - sl) / entry
+        rr_full = (t3 - entry) / risk_ps
+        hard_fail, soft_fail = [], []
+        if sl_pct > config.MAX_SL_PERCENT:
+            hard_fail.append(f"stop {sl_pct:.1%} > {config.MAX_SL_PERCENT:.0%} max")
+        if rr_full < config.MIN_RISK_REWARD:
+            hard_fail.append(f"R:R {rr_full:.2f} < {config.MIN_RISK_REWARD:.1f} to final target")
+        if rs_vs_nifty <= 0:
+            soft_fail.append("relative strength not above Nifty 50")
+        gate_reason = ""
+        if hard_fail:                                  # backtest would reject outright
+            verdict, vcol = "AVOID", C["red"]
+            gate_reason = "; ".join(hard_fail + soft_fail)
+        elif soft_fail and verdict == "STRONG BUY":    # RS-only miss → cap conviction
+            verdict, vcol = "WATCHLIST", C["amber"]
+            gate_reason = "; ".join(soft_fail)
+        if gate_reason:
+            conf_downgraded = True
+            _g = "Backtest risk gate: " + gate_reason
+            conf_downgrade_reason = (conf_downgrade_reason + " · " + _g) if conf_downgrade_reason else _g
+
     bb_pct = float((l["close"]-l["bb_lower"])/max(l["bb_upper"]-l["bb_lower"],0.01)*100)
 
     # Entry zone: low = optimal entry, high = acceptable upper limit
@@ -1184,7 +1237,7 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
 def make_chart(df: pd.DataFrame, sd: dict, symbol: str, show_vwap: bool = False) -> go.Figure:
     fig = make_subplots(rows=3, cols=1, shared_xaxes=True,
                         row_heights=[0.58,0.21,0.21], vertical_spacing=0.02)
-    bg, pbg = C["bg"], C["card"]
+    bg = C["bg"]
 
     fig.add_trace(go.Candlestick(x=df.index, open=df["open"], high=df["high"],
         low=df["low"], close=df["close"], name="Price",
@@ -1258,17 +1311,40 @@ def make_chart(df: pd.DataFrame, sd: dict, symbol: str, show_vwap: bool = False)
         fig.add_hline(y=lvl,line=dict(color=hex_rgba(col,0.3),width=1,dash="dash"),row=3,col=1)
     fig.add_hline(y=50,line=dict(color="rgba(255,255,255,0.08)",width=1,dash="dot"),row=3,col=1)
 
-    fig.update_layout(paper_bgcolor=bg,plot_bgcolor=pbg,
-        font=dict(color=C["muted"],family="JetBrains Mono",size=11),
+    # Default view: most recent ~6 months (still zoom-out-able via the selector).
+    _n = len(df)
+    _start = df.index[max(0, _n - 130)]
+    fig.update_layout(paper_bgcolor=bg, plot_bgcolor=bg,
+        font=dict(color=C["muted"], family="JetBrains Mono", size=11),
         xaxis_rangeslider_visible=False, showlegend=True,
-        legend=dict(bgcolor=hex_rgba(C["card"],0.9),bordercolor=C["border"],borderwidth=1,font=dict(size=10)),
-        height=680, margin=dict(l=60,r=100,t=10,b=20))
-    for i in range(1,4):
-        fig.update_xaxes(gridcolor=hex_rgba(C["border"],0.8),showgrid=True,zeroline=False,row=i,col=1)
-        fig.update_yaxes(gridcolor=hex_rgba(C["border"],0.8),showgrid=True,zeroline=False,row=i,col=1)
-    fig.update_yaxes(title_text="Price (₹)",row=1,col=1)
-    fig.update_yaxes(title_text="MACD",row=2,col=1)
-    fig.update_yaxes(title_text="RSI",row=3,col=1,range=[0,100])
+        hovermode="x unified",
+        hoverlabel=dict(bgcolor=C["card"], bordercolor=C["border"],
+                        font=dict(family="JetBrains Mono", size=11, color=C["text"])),
+        legend=dict(orientation="h", yanchor="bottom", y=1.015, xanchor="right", x=1,
+                    bgcolor="rgba(0,0,0,0)", font=dict(size=10)),
+        height=680, margin=dict(l=58, r=104, t=48, b=20))
+    # TradingView-style range selector on the top price axis.
+    fig.update_xaxes(rangeselector=dict(
+            buttons=[dict(count=3, label="3M", step="month", stepmode="backward"),
+                     dict(count=6, label="6M", step="month", stepmode="backward"),
+                     dict(count=1, label="1Y", step="year",  stepmode="backward"),
+                     dict(step="all", label="All")],
+            bgcolor=C["card"], activecolor=C["blue"], bordercolor=C["border"],
+            borderwidth=1, font=dict(color=C["muted"], size=10), x=0, y=1.05),
+        row=1, col=1)
+    for i in range(1, 4):
+        # No vertical gridlines; collapse weekend gaps; crosshair spike across panels.
+        fig.update_xaxes(showgrid=False, zeroline=False,
+            rangebreaks=[dict(bounds=["sat", "mon"])],
+            showspikes=True, spikemode="across", spikesnap="cursor",
+            spikecolor=hex_rgba(C["muted"], 0.45), spikethickness=1, spikedash="dot",
+            range=[_start, df.index[-1]], row=i, col=1)
+        # Faint horizontal gridlines only (TradingView look).
+        fig.update_yaxes(showgrid=True, gridcolor=hex_rgba(C["border"], 0.55),
+            zeroline=False, row=i, col=1)
+    fig.update_yaxes(title_text="Price (₹)", row=1, col=1)
+    fig.update_yaxes(title_text="MACD", row=2, col=1)
+    fig.update_yaxes(title_text="RSI", row=3, col=1, range=[0, 100])
     return fig
 
 def make_gauge(total: int, verdict: str, vcol: str) -> go.Figure:
@@ -1431,6 +1507,19 @@ SECTOR_MAP = {
     "ZENSAR":"IT","RATEGAIN":"IT","DATAMATICS":"IT",
 }
 
+# ── VALIDATED NIFTY-500 UNIVERSE (single source of truth) ───────────────────────
+# config.UNIVERSE is parsed from nifty500.csv (yfinance "SYMBOL.NS" tickers). The
+# app uses PLAIN symbols, so strip the ".NS" suffix. This is the same validated
+# 500-name set that the CLI screener (main.py) and scan.py enumerate, so all three
+# scan the identical universe. Sectors from config fill any name not already in the
+# app's more granular hand-labelled SECTOR_MAP (hand labels win).
+NIFTY500 = list(dict.fromkeys(
+    s[:-3] if s.endswith(".NS") else s for s in config.UNIVERSE
+))
+for _sym, _sec in config.SECTOR_MAP.items():
+    _plain = _sym[:-3] if _sym.endswith(".NS") else _sym
+    SECTOR_MAP.setdefault(_plain, _sec)
+
 SCREENER_LISTS = {
     "Nifty 50":         list(dict.fromkeys(NIFTY50)),
     "Nifty Next 50":    list(dict.fromkeys(NEXT50)),
@@ -1438,6 +1527,7 @@ SCREENER_LISTS = {
     "Nifty Smallcap":   list(dict.fromkeys(SMALLCAP)),
     "Nifty 100":        list(dict.fromkeys(NIFTY50+NEXT50)),
     "All 300+":         list(dict.fromkeys(NIFTY50+NEXT50+MIDCAP+SMALLCAP)),
+    "Nifty 500 (full)": NIFTY500,
 }
 
 # ── WATCHLIST STORAGE ──────────────────────────────────────────────────────────
@@ -1919,6 +2009,66 @@ def tab_analyse(stocks_df, capital):
             f"({earn_w['date_str']}). Swing trades entering now carry gap risk. "
             f"Consider waiting until after results or sizing down.")
 
+    # ── Verdict hero — the headline panel the eye hits first ──────────────────
+    _v   = sd["verdict"]; _vc = sd["vcol"]; _tot = sd["total"]; _trh = sd["trade"]
+    _action = {
+        "STRONG BUY":      "High-conviction entry — size with the 1% rule.",
+        "WATCHLIST":       "Setup building — accumulate on a pullback into the entry zone.",
+        "EXTENDED – WAIT": "Strong stock but over-extended — wait for the EMA21 pullback.",
+        "AVOID":           "Trend / risk gate failed — stand aside.",
+    }.get(_v, "")
+    _eh_hero = _trh.get("entry_high", _trh["entry"])
+    _entry_disp = (f"₹{_trh['entry']:,.0f}–{_eh_hero:,.0f}"
+                   if _eh_hero > _trh["entry"] + 0.5 else f"₹{_trh['entry']:,.2f}")
+
+    def _chip(lbl, val, col):
+        return (f"<div style='background:{C['bg']};border:1px solid {C['border']};border-radius:10px;"
+                f"padding:7px 14px;min-width:78px'>"
+                f"<div style='font-family:DM Sans,sans-serif;font-size:10px;letter-spacing:.08em;"
+                f"text-transform:uppercase;color:{C['muted']}'>{lbl}</div>"
+                f"<div style='font-family:JetBrains Mono,monospace;font-size:15px;color:{col}'>{val}</div></div>")
+
+    _chips = (_chip("Entry", _entry_disp, C["blue"]) +
+              _chip("Stop",  f"₹{_trh['sl']:,.0f}", C["red"]) +
+              _chip("R:R",   f"{_trh['rr']}x",      C["amber"]))
+    st.markdown(
+        f"<div style='position:relative;overflow:hidden;border-radius:16px;"
+        f"border:1px solid {hex_rgba(_vc,0.45)};"
+        f"background:linear-gradient(135deg,{hex_rgba(_vc,0.18)} 0%,{C['card']} 58%);"
+        f"box-shadow:0 0 38px {hex_rgba(_vc,0.10)};padding:18px 24px;margin-bottom:16px'>"
+        f"<div style='display:flex;align-items:center;justify-content:space-between;"
+        f"flex-wrap:wrap;gap:18px'>"
+        f"<div style='min-width:230px'>"
+        f"<div style='font-family:DM Sans,sans-serif;font-size:11px;letter-spacing:.14em;"
+        f"text-transform:uppercase;color:{C['muted']}'>Verdict</div>"
+        f"<div style='font-family:DM Sans,sans-serif;font-weight:700;font-size:34px;"
+        f"line-height:1.06;color:{_vc}'>{_v}</div>"
+        f"<div style='font-family:DM Sans,sans-serif;font-size:13px;color:{C['text']};"
+        f"margin-top:4px;max-width:340px'>{_action}</div></div>"
+        f"<div style='display:flex;align-items:baseline;gap:5px'>"
+        f"<span style='font-family:JetBrains Mono,monospace;font-size:52px;font-weight:600;"
+        f"color:{C['text']}'>{_tot}</span>"
+        f"<span style='font-family:JetBrains Mono,monospace;font-size:17px;color:{C['muted']}'>/100</span></div>"
+        f"<div style='display:flex;gap:9px;flex-wrap:wrap'>{_chips}</div>"
+        f"</div></div>", unsafe_allow_html=True)
+
+    # ── Watchlist toggle ──────────────────────────────────────────────────────
+    _in_wl = sym in {w["symbol"] for w in load_watchlist()}
+    _wl_l, _wl_r = st.columns([4, 1])
+    with _wl_r:
+        if _in_wl:
+            if st.button("★ Remove from Watchlist", key=f"an_wl_rm_{sym}",
+                         use_container_width=True):
+                remove_from_watchlist(sym)
+                st.toast(f"Removed {sym} from Watchlist")
+                st.rerun()
+        else:
+            if st.button("☆ Add to Watchlist", key=f"an_wl_add_{sym}",
+                         use_container_width=True):
+                add_to_watchlist(sym, comp)
+                st.toast(f"Added {sym} to Watchlist")
+                st.rerun()
+
     c1, c2, c3 = st.columns([1.1,1.4,1.3])
     with c1:
         st.plotly_chart(make_gauge(sd["total"],sd["verdict"],sd["vcol"]), config={"displayModeBar":False})
@@ -2069,7 +2219,18 @@ def tab_analyse(stocks_df, capital):
     with _ch_tgl:
         show_vwap = st.checkbox("Anchored VWAP", value=False, key=f"vwap_{sym}",
                                 help="Overlay VWAP anchored from the most recent swing low")
-    st.plotly_chart(make_chart(df_ind, sd, sym, show_vwap=show_vwap), config={"displayModeBar":True})
+    # Primary view: the app's own Plotly chart (own data + entry/SL/T1-T3 lines).
+    # The embedded TradingView widget can't render NSE symbols for anonymous users
+    # (exchange-data agreement requires a logged-in TradingView account), so we
+    # link out to the full TradingView site instead, where login works.
+    st.plotly_chart(make_chart(df_ind, sd, sym, show_vwap=show_vwap),
+                    config={"displayModeBar":True})
+    st.markdown(
+        f"<a href='https://www.tradingview.com/chart/?symbol=NSE:{sym}' target='_blank' "
+        f"style='display:inline-block;margin-top:6px;font-family:DM Sans,sans-serif;"
+        f"font-size:13px;font-weight:600;color:#2962FF;text-decoration:none'>"
+        f"↗ Open {sym} on TradingView</a>",
+        unsafe_allow_html=True)
 
     # Signal grid
     st.markdown("<hr>", unsafe_allow_html=True)
@@ -2527,8 +2688,16 @@ def tab_watchlist():
                 st.markdown(
                     f"<div style='display:flex;gap:0;margin-bottom:10px'>{sc_html}</div>",
                     unsafe_allow_html=True)
+                # Own Plotly chart (data + entry/SL/targets); link out to TradingView
+                # since the embed can't render NSE symbols for anonymous users.
                 st.plotly_chart(make_chart(df_w, sd_w, s),
                                 config={"displayModeBar": True}, key=f"wl_chart_{s}")
+                st.markdown(
+                    f"<a href='https://www.tradingview.com/chart/?symbol=NSE:{s}' target='_blank' "
+                    f"style='display:inline-block;margin-top:6px;font-family:DM Sans,sans-serif;"
+                    f"font-size:13px;font-weight:600;color:#2962FF;text-decoration:none'>"
+                    f"↗ Open {s} on TradingView</a>",
+                    unsafe_allow_html=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -3054,6 +3223,7 @@ def tab_backtest(stocks_df):
     _preset_map = {
         "Nifty 50 (all)":   NIFTY50,
         "Nifty Next 50":    NEXT50,
+        "Nifty 500 (full)": NIFTY500,
         "Top 10 (default)": ["RELIANCE","TCS","INFY","HDFCBANK","ICICIBANK",
                               "BHARTIARTL","TITAN","BAJFINANCE","SBIN","HCLTECH"],
         "IT Sector":        [s for s,sec in SECTOR_MAP.items() if sec=="IT"][:15],
