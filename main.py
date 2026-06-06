@@ -64,6 +64,7 @@ def cmd_backtest(args):
         _print_metrics(metrics)
         _print_validation(validation)
         _print_sample_trades(result["trades"])
+        _print_breakdowns(result["trades"])
 
     _save_report(result)
 
@@ -204,6 +205,38 @@ def _print_sample_trades(trades: list, n: int = 10):
     print()
 
 
+def _print_setup_breakdown(trades: list, title: str):
+    from backtest import setup_breakdown
+    rows = setup_breakdown(trades)
+    if not rows:
+        return
+    print(f"═══ {title} ═══")
+    print(f"  {'Setup':<18}{'Trades':>7}{'Win%':>7}{'AvgWin':>9}{'AvgLoss':>9}"
+          f"{'Payoff':>8}{'PF':>7}{'TotalPnL':>12}{'Exp/Trd':>10}")
+    print("  " + "-" * 96)
+    for r in rows:
+        print(f"  {r['setup']:<18}{r['trades']:>7}{r['win_rate_pct']:>6.1f}%"
+              f"{r['avg_win']:>9,.0f}{r['avg_loss']:>9,.0f}{r['payoff']:>8.2f}"
+              f"{r['profit_factor']:>7.2f}{r['total_pnl']:>12,.0f}{r['expectancy']:>10,.0f}")
+    earners  = [r["setup"] for r in rows if r["total_pnl"] > 0]
+    bleeders = [r["setup"] for r in rows if r["total_pnl"] < 0]
+    print()
+    if earners:
+        print(f"  [+] Earners: {', '.join(earners)}")
+    if bleeders:
+        print(f"  [-] Bleeders (candidates to CUT): {', '.join(bleeders)}")
+    print()
+
+
+def _print_breakdowns(trades: list):
+    """Overall + out-of-sample per-setup performance."""
+    _print_setup_breakdown(trades, "Per-Setup Breakdown — ALL trades")
+    test_tr = [t for t in trades if t.get("phase") == "test"]
+    if test_tr:
+        _print_setup_breakdown(
+            test_tr, "Per-Setup Breakdown — OUT-OF-SAMPLE (test half only)")
+
+
 def _print_walk_forward(result: dict):
     m = result["full_metrics"]
     print("═══ Walk-Forward Report ═══════════════════════════════")
@@ -218,6 +251,7 @@ def _print_walk_forward(result: dict):
     _print_metrics(m)
     _print_validation(result["validation"])
     _print_sample_trades(result.get("trades", []))
+    _print_breakdowns(result.get("trades", []))
 
 
 def _print_output_summary(output: dict):
