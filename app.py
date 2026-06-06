@@ -296,12 +296,22 @@ def fetch_sector_rotation(short: int = 21, long: int = 63,
     sample = [t for ts in by_sector.values() for t in ts[:per_sector]]
 
     def _one(ticker: str):
-        try:
-            base = ticker[:-3] if ticker.endswith(".NS") else ticker
-            d = fetch_ohlcv(base)             # cached single-ticker fetch (works on cloud)
-            return ticker, d
-        except Exception:
-            return ticker, None
+        # Plain single-ticker download — NO Streamlit/cache calls here, because
+        # these run in worker threads that lack a ScriptRunContext (calling a
+        # @st.cache_data function from them throws and yields zero data).
+        base = ticker[:-3] if ticker.endswith(".NS") else ticker
+        for suf in (".NS", ".BO"):
+            try:
+                df = yf.download(base + suf, period="6mo", interval="1d",
+                                 progress=False, auto_adjust=True, threads=False)
+            except Exception:
+                df = None
+            if df is not None and not df.empty:
+                if isinstance(df.columns, pd.MultiIndex):
+                    df.columns = df.columns.get_level_values(0)
+                df.columns = [c.lower() for c in df.columns]
+                return ticker, df
+        return ticker, None
 
     stock_data: dict = {}
     with ThreadPoolExecutor(max_workers=20) as ex:
