@@ -1084,6 +1084,12 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
     elif l1<20:           total=min(raw,50); capped=True
     elif l1<30 or recent_bearish: total=min(raw,68); capped=True
     else:                 total=raw; capped=False
+    # Heavy SELL confluence (conf_pts as low as -10) can push raw below 0 — e.g.
+    # RELIANCE showed "total = -4". Clamping to the displayed 0-100 scale doesn't
+    # change the verdict bucket (a clamped value stays on the same side of every
+    # threshold), it just stops the gauge/score badge from showing a nonsensical
+    # negative number to the user.
+    total = max(0, min(100, total))
 
     if total>=75:   verdict,vcol = "STRONG BUY", C["green"]
     elif total>=55: verdict,vcol = "WATCHLIST",  C["amber"]
@@ -1205,15 +1211,28 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
 
     # SL: below demand zone, not below entry — tighter institutional stop
     if verdict in ("STRONG BUY","WATCHLIST") and entry > 0:
-        sl_sup = sorted([s for s in support if s < entry*0.999], reverse=True)
-        sl = round(sl_sup[0]*0.998, 2) if sl_sup and (entry-sl_sup[0])/entry < 0.06 else round(entry-0.4*adr, 2)
+        sl_sup    = sorted([s for s in support if s < entry*0.999], reverse=True)
+        sl_by_sup = round(sl_sup[0]*0.998, 2) if sl_sup else 0.0
+        sl_by_adr = round(entry-0.4*adr, 2)
+        # A "clean support" stop is only usable if it sits at least as far from
+        # entry as the volatility-calibrated ADR stop would. A support shelf
+        # that happens to fall within a fraction of a percent of entry produces
+        # a stop that ordinary daily noise will clip — not a real structure
+        # break — while showing an inflated, misleading R:R. Fall back to the
+        # ADR-based stop (sized to the stock's actual volatility) in that case.
+        if sl_sup and (entry - sl_sup[0]) / entry < 0.06 and sl_by_sup <= sl_by_adr:
+            sl = sl_by_sup
+        else:
+            sl = sl_by_adr
     else:
         sl = round(entry-0.5*adr, 2)
 
     t1 = round(entry+0.75*mdr, 2)
     t2 = round(entry+1.00*mdr, 2)
     t3 = round(entry+1.50*mdr, 2)
-    rr = round((t1-entry)/max(entry-sl, 0.01), 2)
+    # entry==sl is a degenerate setup (frozen/illiquid price, ADR/ATR ~ 0) — flooring
+    # the divisor to 0.01 would print a bogus sky-high R:R instead of flagging it.
+    rr = round((t1-entry)/(entry-sl), 2) if (entry-sl) > 0 else 0.0
 
     # ── Backtest-parity risk gate (new entries only) ──────────────────────────
     # Keep the live verdict consistent with what the *backtested* engine would
@@ -1226,14 +1245,21 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
     # to match the full-move MDR target basis the backtest assumes, so we don't
     # falsely reject good setups on the nearer t1.
     if is_entry and verdict in ("STRONG BUY", "WATCHLIST") and entry > 0:
-        risk_ps = max(entry - sl, 0.01)
-        sl_pct  = (entry - sl) / entry
-        rr_full = (t3 - entry) / risk_ps
         hard_fail, soft_fail = [], []
-        if sl_pct > config.MAX_SL_PERCENT:
-            hard_fail.append(f"stop {sl_pct:.1%} > {config.MAX_SL_PERCENT:.0%} max")
-        if rr_full < config.MIN_RISK_REWARD:
-            hard_fail.append(f"R:R {rr_full:.2f} < {config.MIN_RISK_REWARD:.1f} to final target")
+        # Degenerate stop (SL at/above entry) — happens when ADR/ATR collapse to ~0
+        # on frozen/circuit-locked illiquid names. Flooring risk_ps to 0.01 here
+        # would hide this behind a bogus sky-high R:R and let a broken setup
+        # through as STRONG BUY/WATCHLIST, so reject it outright instead.
+        if entry - sl <= 0:
+            hard_fail.append("stop loss at/above entry — degenerate setup (likely frozen/illiquid price)")
+        else:
+            risk_ps = entry - sl
+            sl_pct  = (entry - sl) / entry
+            rr_full = (t3 - entry) / risk_ps
+            if sl_pct > config.MAX_SL_PERCENT:
+                hard_fail.append(f"stop {sl_pct:.1%} > {config.MAX_SL_PERCENT:.0%} max")
+            if rr_full < config.MIN_RISK_REWARD:
+                hard_fail.append(f"R:R {rr_full:.2f} < {config.MIN_RISK_REWARD:.1f} to final target")
         if rs_vs_nifty <= 0:
             soft_fail.append("relative strength not above Nifty 50")
         gate_reason = ""
@@ -1717,7 +1743,8 @@ def remove_holding(symbol: str):
     save_holdings([h for h in load_holdings() if h["symbol"] != symbol])
 
 # ── HOLD / EXIT SIGNAL ENGINE ──────────────────────────────────────────────────
-def get_hold_exit_signal(sd: dict, entry_price: float) -> dict:
+def get_hold_exit_signal(sd: dict, entry_price: float,
+                         df: pd.DataFrame = None, entry_date: str = None) -> dict:
     """
     Swing trading exit logic — priority order:
     1. SL breached (ATR stop)      → EXIT immediately
@@ -1739,13 +1766,32 @@ def get_hold_exit_signal(sd: dict, entry_price: float) -> dict:
     st_bull    = st_detail.get("value", "Bullish") == "Bullish"
     pnl_pct    = (cmp - entry_price) / max(entry_price, 0.01) * 100
 
-    # ── ATR stop anchored to ACTUAL entry price (not score's hypothetical entry)
-    # tr["sl"] is calculated from score's hypothetical entry (can be above CMP
-    # for WATCHLIST stocks whose entry = breakout trigger). Always rebase to real entry.
+    # ── ATR trailing stop anchored to ACTUAL entry price (not score's hypothetical
+    # entry) — tr["sl"] is calculated from score's hypothetical entry (can be above
+    # CMP for WATCHLIST stocks whose entry = breakout trigger), so always rebase
+    # the floor to the real entry. The trailing component (below) then ratchets
+    # the stop up as the stock makes new highs after entry.
     atr_val  = tr.get("atr", 0)
     adr_val  = tr.get("adr", 0)
+
+    # High-water mark close since entry — lets the stop trail favourable moves
+    # instead of sitting fixed at the entry-based level while the stock runs up
+    # (a fixed stop would let a +30% winner round-trip back to breakeven before
+    # "EXIT NOW" ever fires). Derived from price history + entry_date, so it
+    # needs no persisted state and only ever ratchets upward.
+    hwm_close = entry_price
+    if df is not None and entry_date and "Date" in getattr(df, "columns", []):
+        try:
+            since = df[df["Date"] >= pd.to_datetime(entry_date)]
+            if len(since):
+                hwm_close = max(entry_price, float(since["close"].max()))
+        except Exception:
+            pass
+
     if atr_val > 0:
-        atr_stop = round(entry_price - 1.5 * atr_val, 2)
+        initial_stop = entry_price - 1.5 * atr_val
+        trail_stop   = hwm_close   - 1.5 * atr_val
+        atr_stop = round(max(initial_stop, trail_stop), 2)
     elif adr_val > 0:
         atr_stop = round(entry_price - adr_val, 2)
     else:
@@ -1758,7 +1804,6 @@ def get_hold_exit_signal(sd: dict, entry_price: float) -> dict:
     if t2 == 0:  t2 = round(entry_price + 1.00 * mdr, 2)
     if t3 == 0:  t3 = round(entry_price + 1.50 * mdr, 2)
 
-    _base = {"atr_stop": atr_stop, "t1": t1, "t2": t2, "t3": t3}
     _base = {"atr_stop": atr_stop, "t1": t1, "t2": t2, "t3": t3}
     # ── Priority 1: Hard stop hit ─────────────────────────────────────────────
     if atr_stop > 0 and cmp < atr_stop:
@@ -3068,7 +3113,7 @@ def tab_holdings():
         total_invested      += entry_px * qty
         total_current_value += cmp * qty
 
-        sig        = get_hold_exit_signal(sd, entry_px)
+        sig        = get_hold_exit_signal(sd, entry_px, df_h, entry_date)
         signal     = sig["signal"]
         sig_color  = sig["color"]
         reason     = sig["reason"]
@@ -3210,8 +3255,9 @@ def tab_holdings():
             _sk = f"hld_sd_{_h['symbol']}"
             _cached = st.session_state.get(_sk)
             if _cached is None: continue
-            _sd2, _ = _cached
-            _sig2   = get_hold_exit_signal(_sd2, float(_h.get("entry_price",0)))["signal"]
+            _sd2, _df2 = _cached
+            _sig2   = get_hold_exit_signal(_sd2, float(_h.get("entry_price",0)),
+                                           _df2, _h.get("entry_date"))["signal"]
             _val2   = float(_h.get("entry_price",0)) * int(_h.get("qty",1))
             _hm_labels.append(_h["symbol"])
             _hm_colors.append(_sig_hex.get(_sig2, "#8b8fa8"))
@@ -3250,8 +3296,8 @@ def tab_holdings():
                 _sec2 = SECTOR_MAP.get(_h["symbol"], "Other")
                 _sector_exp[_sec2] = _sector_exp.get(_sec2, 0) + _pos_val
                 if _c2:
-                    _sd3, _ = _c2
-                    _sig3 = get_hold_exit_signal(_sd3, _ep)
+                    _sd3, _df3 = _c2
+                    _sig3 = get_hold_exit_signal(_sd3, _ep, _df3, _h.get("entry_date"))
                     _sl3  = _sig3.get("atr_stop", _ep * 0.93)
                     _loss = (_ep - _sl3) * _qty2
                     _max_loss += max(_loss, 0)
