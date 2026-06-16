@@ -956,7 +956,8 @@ def detect_breakout(df: pd.DataFrame, resistance: list, vr: float, cmp: float = 
             "reason": f"Coiling just under ₹{piv:,.2f} — buy-stop on a confirmed close above the pivot"}
 
 
-def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_entry: bool = True) -> dict:
+def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_entry: bool = True,
+          market_regime: str = "Bullish") -> dict:
     """
     is_entry=True  → strategy confluence filter applies for new entries.
     is_entry=False → strategies shown as info only, no verdict change (monitoring holds).
@@ -1371,6 +1372,26 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
             _g = "Backtest risk gate: " + gate_reason
             conf_downgrade_reason = (conf_downgrade_reason + " · " + _g) if conf_downgrade_reason else _g
 
+    # ── Market regime gate (new entries only) ─────────────────────────────────
+    # Weinstein's core rule: ~75% of stocks follow the index. A long setup in a
+    # Bearish (index Stage 4) market fails far more often regardless of how clean
+    # the stock looks, so cap conviction by the broad-market regime:
+    #   Bullish → full conviction (no change)
+    #   Neutral → be selective — no fresh STRONG BUY, cap to Watchlist
+    #   Bearish → capital preservation — stand aside (AVOID)
+    if is_entry and verdict in ("STRONG BUY", "WATCHLIST"):
+        _mr = str(market_regime or "Bullish").capitalize()
+        _rg = ""
+        if _mr == "Bearish":
+            verdict, vcol = "AVOID", C["red"]
+            _rg = "Market regime Bearish (Nifty in Stage 4 / below falling 30-wk MA) — stand aside, longs are low-probability"
+        elif _mr == "Neutral" and verdict == "STRONG BUY":
+            verdict, vcol = "WATCHLIST", C["amber"]
+            _rg = "Market regime Neutral — capped to Watchlist; wait for the index to confirm Stage 2 before full-size entry"
+        if _rg:
+            conf_downgraded = True
+            conf_downgrade_reason = (conf_downgrade_reason + " · " + _rg) if conf_downgrade_reason else _rg
+
     bb_pct = float((l["close"]-l["bb_lower"])/max(l["bb_upper"]-l["bb_lower"],0.01)*100)
 
     # Entry zone: low = optimal entry, high = acceptable upper limit
@@ -1407,6 +1428,7 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
         "voldry_hit": voldry_hit, "voldry_label": voldry_label,
         "absorb_hit": absorb_hit, "absorb_label": absorb_label,
         "is_extended": is_extended, "dist_ema21": round(dist_ema21, 1),
+        "market_regime": str(market_regime or "Bullish").capitalize(),
     }
 
 # ── CHART ──────────────────────────────────────────────────────────────────────
@@ -1997,13 +2019,13 @@ def get_hold_exit_signal(sd: dict, entry_price: float,
     }
 
 # ── SCREENER ───────────────────────────────────────────────────────────────────
-def _score_one(sym: str, nifty_ret: float = 0.0):
+def _score_one(sym: str, nifty_ret: float = 0.0, market_regime: str = "Bullish"):
     try:
         raw = fetch_ohlcv(sym)
         ind = add_indicators(raw)
         if len(ind) < 5: return None
         live_px = fetch_live_price(sym).get("price", 0.0) or 0.0
-        sd = score(ind, nifty_ret=nifty_ret, live_price=live_px)
+        sd = score(ind, nifty_ret=nifty_ret, live_price=live_px, market_regime=market_regime)
         tr = sd["trade"]
         rs_raw = _get_rs_raw(sym)
         mtf    = get_mtf_signal(sym)
@@ -2031,8 +2053,12 @@ def run_screener(symbols: list, workers: int = 20) -> pd.DataFrame:
     prog = st.progress(0, text=f"Scanning 0 / {total}...")
     live_box = st.empty()
     nifty_ret = fetch_nifty_3m_return()
+    try:
+        _mkt_regime = get_regime(fetch_ohlcv("^NSEI")).get("regime", "Bullish")
+    except Exception:
+        _mkt_regime = "Bullish"
     with ThreadPoolExecutor(max_workers=workers) as ex:
-        futures = {ex.submit(_score_one, s, nifty_ret): s for s in symbols}
+        futures = {ex.submit(_score_one, s, nifty_ret, _mkt_regime): s for s in symbols}
         for fut in as_completed(futures):
             sym = futures[fut]; done["n"] += 1
             pct = done["n"] / total
@@ -2166,7 +2192,13 @@ def tab_analyse(stocks_df, capital):
                 return
             live = fetch_live_price(sym)                         # ← fetch live price FIRST
             live_px = live["price"] if live["price"] else 0.0   # 0 = fallback to last close
-            sd   = score(df_ind, nifty_ret=fetch_nifty_3m_return(), live_price=live_px)
+            try:
+                _reg = get_regime(fetch_ohlcv("^NSEI"))
+            except Exception:
+                _reg = {"regime": "Bullish", "color": C["green"], "close": "—", "ma30w": "—", "rsi": "—"}
+            _mkt_regime = _reg.get("regime", "Bullish")
+            sd   = score(df_ind, nifty_ret=fetch_nifty_3m_return(), live_price=live_px,
+                         market_regime=_mkt_regime)
         except Exception as e:
             st.error(f"Could not load {sym}. Check the symbol or try again. ({e})")
             return
@@ -2195,6 +2227,24 @@ def tab_analyse(stocks_df, capital):
         f"<span style='font-family:JetBrains Mono,monospace;font-size:28px;color:{C['text']};font-weight:500'>₹{price:,.2f}</span>"
         f"<span style='font-family:JetBrains Mono,monospace;font-size:15px;color:{chg_c}'>{sign}{chg:.2f} ({sign}{pct:.2f}%)</span>"
         f"</div></div></div>", unsafe_allow_html=True)
+
+    # ── Market Regime banner — gates long entries (Weinstein index-stage rule) ──
+    _rg_name = _reg.get("regime", "Bullish")
+    _rg_col  = _reg.get("color", C["green"])
+    _rg_msg  = {
+        "Bullish": "Index in Stage 2 uptrend — full conviction on longs.",
+        "Neutral": "Index Neutral (Stage 1/3) — be selective; fresh STRONG BUYs capped to Watchlist.",
+        "Bearish": "Index in Stage 4 downtrend — capital preservation; long setups gated to AVOID.",
+        "Unknown": "Index regime unavailable — trading at default conviction.",
+    }.get(_rg_name, "")
+    st.markdown(
+        f"<div style='background:{hex_rgba(_rg_col,0.10)};border:1px solid {hex_rgba(_rg_col,0.45)};"
+        f"border-radius:10px;padding:9px 16px;margin-bottom:1rem;display:flex;gap:14px;align-items:center'>"
+        f"<span style='font-family:JetBrains Mono,monospace;font-size:12px;font-weight:700;color:{_rg_col};"
+        f"text-transform:uppercase;letter-spacing:.06em'>🌐 Market: {_rg_name}</span>"
+        f"<span style='font-family:DM Sans,sans-serif;font-size:12px;color:{C['text']}'>{_rg_msg} "
+        f"<span style='color:{C['muted']}'>Nifty {_reg.get('close','—')} · 30wMA {_reg.get('ma30w','—')} · RSI {_reg.get('rsi','—')}</span></span>"
+        f"</div>", unsafe_allow_html=True)
 
     # ── MTF + Earnings + RS badges ────────────────────────────────────────────
     badge_parts = []
