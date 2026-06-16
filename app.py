@@ -601,16 +601,39 @@ def detect_vcp(df: pd.DataFrame) -> tuple:
         return False, "Partial contraction"
     return False, "No contraction"
 
-def find_sr(df: pd.DataFrame, lookback: int = 60, window: int = 10):
+def find_sr(df: pd.DataFrame, lookback: int = 120, window: int = 10):
+    """Swing-pivot S/R selected by PROXIMITY to current price, not global extremes.
+
+    Old behaviour returned the 3 lowest lows / 3 highest highs over the window, so
+    a trending stock with few recent swing lows fell back to its ALL-TIME low as
+    "support" (e.g. ₹1,159 support on a ₹4,504 stock) — junk that corrupts stops
+    and entry zones. We now return:
+      support    = nearest swing lows BELOW price (nearest first)
+      resistance = nearest swing highs AT/ABOVE price (the pivot being tested or
+                   just broken) — nearest first
+    with fallbacks to RECENT structure (20-bar low/high), never the all-time extreme.
+    """
     sub = df.tail(lookback)
+    cmp = float(df["close"].iloc[-1])
     highs, lows = [], []
-    for i in range(window, len(sub)-window):
-        if sub["high"].iloc[i] == sub["high"].iloc[i-window:i+window].max():
-            highs.append(float(sub["high"].iloc[i]))
-        if sub["low"].iloc[i]  == sub["low"].iloc[i-window:i+window].min():
-            lows.append(float(sub["low"].iloc[i]))
-    resistance = sorted(set(highs), reverse=True)[:3] or [float(df["high"].max())]
-    support    = sorted(set(lows))[:3]            or [float(df["low"].min())]
+    for i in range(window, len(sub) - window):
+        hi = float(sub["high"].iloc[i]); lo = float(sub["low"].iloc[i])
+        if hi == float(sub["high"].iloc[i-window:i+window+1].max()):
+            highs.append(hi)
+        if lo == float(sub["low"].iloc[i-window:i+window+1].min()):
+            lows.append(lo)
+
+    # Support — nearest swing lows strictly below price (nearest first).
+    support = sorted({l for l in lows if l < cmp}, reverse=True)[:3]
+    if not support:
+        support = [round(float(df["low"].tail(20).min()), 2)]
+
+    # Resistance — swing highs at/above price (a pivot up to ~1.5% below price still
+    # counts: it is the level just broken, now acting as support). Nearest first.
+    resistance = sorted({h for h in highs if h >= cmp * 0.985})[:3]
+    if not resistance:
+        resistance = [round(max(float(df["high"].tail(20).max()), cmp * 1.01), 2)]
+
     return support, resistance
 
 def candle_pattern(df: pd.DataFrame) -> str:
