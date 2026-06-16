@@ -890,6 +890,72 @@ def detect_absorption(df: pd.DataFrame) -> tuple:
         return False, ""
 
 
+def detect_breakout(df: pd.DataFrame, resistance: list, vr: float, cmp: float = 0.0) -> dict:
+    """Classify whether price is breaking a resistance pivot, and whether that
+    breakout is CONFIRMED or at risk of being a FALSE breakout.
+
+    The engine's default entry is a pullback to demand — correct for a stock
+    resting inside its base, wrong for a stock that is breaking out *now*. This
+    classifier lets score() pick a breakout entry (buy the strength, tight pivot
+    stop) instead of telling the user to wait for a dip that never comes.
+
+    False-breakout screen (a breakout only counts if it clears the pivot on real
+    participation): volume ≥ 1.3× the 20-day average AND the bar closes in the
+    upper half of its range. A poke above the level on light volume, or a close
+    back in the lower half (long upper wick), is flagged as false-breakout risk —
+    enter on a retest, not on the spike.
+
+    Returns:
+      mode         : "confirmed" | "unconfirmed" | "near" | "none"
+      level        : the resistance pivot in play (0.0 if none)
+      vol_confirm  : breakout-day volume ≥ 1.3× avg
+      close_strong : closed in the upper half of the day's range
+      false_risk   : pierced the pivot but failed confirmation
+      reason       : human-readable note for the UI
+    """
+    none = {"mode": "none", "level": 0.0, "vol_confirm": False,
+            "close_strong": False, "false_risk": False, "reason": ""}
+    if not resistance:
+        return none
+    l = df.iloc[-1]; p = df.iloc[-2]
+    cmp  = float(cmp) if cmp > 0 else float(l["close"])
+    prev = float(p["close"])
+    hi, lo = float(l["high"]), float(l["low"])
+    rng = hi - lo
+    close_pos    = (cmp - lo) / rng if rng > 0 else 1.0
+    close_strong = close_pos >= 0.5
+    vol_confirm  = vr >= 1.3
+
+    # Pivot the price is interacting with: one it broke through today, else the
+    # nearest one it is coiling just beneath (within 2%).
+    broke, piv = False, None
+    for r in sorted(resistance):
+        if prev <= r * 1.002 and cmp > r:
+            broke, piv = True, r
+            break
+    if piv is None:
+        ups = sorted([r for r in resistance if r >= cmp])
+        if ups and (ups[0] - cmp) / cmp <= 0.02:
+            piv = ups[0]
+    if piv is None:
+        return {**none, "vol_confirm": vol_confirm, "close_strong": close_strong}
+
+    if broke:
+        if vol_confirm and close_strong:
+            return {"mode": "confirmed", "level": piv, "vol_confirm": True,
+                    "close_strong": True, "false_risk": False,
+                    "reason": f"Closed above ₹{piv:,.2f} on {vr:.1f}× volume with a strong close — breakout confirmed"}
+        bad = []
+        if not vol_confirm:  bad.append(f"volume only {vr:.1f}× (need ≥1.3×)")
+        if not close_strong: bad.append("closed in lower half of range — upper-wick rejection")
+        return {"mode": "unconfirmed", "level": piv, "vol_confirm": vol_confirm,
+                "close_strong": close_strong, "false_risk": True,
+                "reason": f"Pierced ₹{piv:,.2f} but {'; '.join(bad)} — possible false breakout, wait for retest/confirmation"}
+    return {"mode": "near", "level": piv, "vol_confirm": vol_confirm,
+            "close_strong": close_strong, "false_risk": False,
+            "reason": f"Coiling just under ₹{piv:,.2f} — buy-stop on a confirmed close above the pivot"}
+
+
 def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_entry: bool = True) -> dict:
     """
     is_entry=True  → strategy confluence filter applies for new entries.
@@ -1134,6 +1200,13 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
     bb_mid_v  = float(l.get("bb_mid", cmp) or cmp)
     breakout_trigger = 0.0   # stored separately as confirmation level
 
+    # Breakout classification — decides whether to use a breakout entry (buy the
+    # strength, tight pivot stop) instead of the default pullback-to-demand entry.
+    brk        = detect_breakout(df, resistance, vr, cmp)
+    brk_mode   = brk["mode"]
+    brk_level  = float(brk["level"])
+    brk_false  = bool(brk["false_risk"])
+
     # ── Extended / Parabolic detection ────────────────────────────────────────
     # A stock scoring high can still be dangerous to buy if it's too far above
     # its moving average. Detect this and change the verdict + entry to a
@@ -1155,13 +1228,31 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
         if spring_hit and spring_low > 0:
             entry  = round(spring_low * 1.001, 2)
             elabel = "Entry (Wyckoff Spring — institutional demand confirmed)"
+        elif brk_mode == "confirmed":
+            # Real breakout on volume — buy the strength now. Shallow band from the
+            # broken pivot (now support) up to CMP; stop goes tight under the pivot.
+            entry  = round(min(cmp, brk_level * 1.01), 2)
+            elabel = "Entry (confirmed breakout — buy now, tight pivot stop)"
+            breakout_trigger = round(brk_level, 2)
+        elif brk_mode == "near":
+            # Coiling just under the pivot — buy-stop on a confirmed close above it.
+            entry  = round(brk_level * 1.002, 2)
+            elabel = "Entry (breakout trigger — buy-stop on close above pivot)"
+            breakout_trigger = round(brk_level, 2)
+        elif brk_mode == "unconfirmed":
+            # Pierced the pivot but failed confirmation — likely false breakout.
+            # Enter on a retest of the pivot, do not chase the spike.
+            entry  = round(brk_level * 0.998, 2)
+            elabel = "Entry (pivot retest — unconfirmed breakout, wait for confirmation)"
+            breakout_trigger = round(brk_level, 2)
         else:
-            # Price AT or just above support — enter on limit near demand zone
+            # Price resting inside the base — enter on limit near demand zone.
             near_s = sorted([s for s in support if s < cmp*0.998], reverse=True)
             entry  = round(near_s[0]*1.002, 2) if near_s and (cmp-near_s[0])/cmp < 0.04 else round(cmp-0.4*adr, 2)
             elabel = "Entry (demand zone)"
-        triggers = sorted([r for r in resistance if r > cmp*1.003])
-        breakout_trigger = triggers[0] if triggers else round(cmp*1.03, 2)
+        if breakout_trigger == 0.0:
+            triggers = sorted([r for r in resistance if r > cmp*1.003])
+            breakout_trigger = triggers[0] if triggers else round(cmp*1.03, 2)
 
     elif verdict=="WATCHLIST":
         # Wyckoff Spring = highest-conviction entry, overrides all other labels
@@ -1210,7 +1301,13 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
         entry  = round(cmp-0.5*adr, 2); elabel = "Entry (N/A)"
 
     # SL: below demand zone, not below entry — tighter institutional stop
-    if verdict in ("STRONG BUY","WATCHLIST") and entry > 0:
+    if verdict == "STRONG BUY" and brk_mode in ("confirmed", "near") and brk_level > 0:
+        # Breakout stop: just under the broken pivot (now support). This is the
+        # textbook breakout stop — risk defined by the pivot you cleared, not a
+        # distant swing low. Capped below entry, and floored at the ADR stop so a
+        # razor-thin pivot doesn't get clipped by ordinary daily noise.
+        sl = round(max(min(brk_level * 0.985, entry * 0.98), entry - 0.5 * adr), 2)
+    elif verdict in ("STRONG BUY","WATCHLIST") and entry > 0:
         sl_sup    = sorted([s for s in support if s < entry*0.999], reverse=True)
         sl_by_sup = round(sl_sup[0]*0.998, 2) if sl_sup else 0.0
         sl_by_adr = round(entry-0.4*adr, 2)
@@ -1299,6 +1396,8 @@ def score(df: pd.DataFrame, nifty_ret: float = 0.0, live_price: float = 0.0, is_
                  "atr":round(atr,2),"adr":round(adr,2),"mdr":round(mdr,2),
                  "breakout_trigger":round(breakout_trigger,2),
                  "scale1":round(entry*1.03,2),"scale2":round(entry*1.05,2),"scale3":round(entry*1.07,2)},
+        "brk_mode": brk_mode, "brk_level": round(brk_level, 2),
+        "brk_false": brk_false, "brk_reason": brk["reason"],
         "bb_pct":round(bb_pct,1),"rsi":rsi,"adx":adx_val,
         "rs_vs_nifty":round(rs_vs_nifty,1),"vol_ratio":vr,
         "bb_width":round(float((l["bb_upper"]-l["bb_lower"])/l["bb_mid"]),4),
@@ -1804,7 +1903,22 @@ def get_hold_exit_signal(sd: dict, entry_price: float,
     if t2 == 0:  t2 = round(entry_price + 1.00 * mdr, 2)
     if t3 == 0:  t3 = round(entry_price + 1.50 * mdr, 2)
 
-    _base = {"atr_stop": atr_stop, "t1": t1, "t2": t2, "t3": t3}
+    # ── 9-EMA swing trail (short-term momentum reference) ────────────────────
+    # Classic swing rule: ride the trade while daily closes hold the 9 EMA; a
+    # close back below the 9 EMA = momentum cooling → tighten/trail; a 9-below-21
+    # cross = the short-term uptrend itself broke → exit. Only armed once the
+    # trade is in profit so normal post-entry basing doesn't whipsaw you out.
+    ema9 = ema21 = 0.0
+    if df is not None and len(getattr(df, "columns", [])):
+        try:
+            if "ema9"  in df.columns: ema9  = float(df["ema9"].iloc[-1])
+            if "ema21" in df.columns: ema21 = float(df["ema21"].iloc[-1])
+        except Exception:
+            pass
+    ema9_stop = round(ema9 * 0.99, 2) if ema9 > 0 else 0.0
+
+    _base = {"atr_stop": atr_stop, "t1": t1, "t2": t2, "t3": t3,
+             "ema9": round(ema9, 2), "ema9_stop": ema9_stop}
     # ── Priority 1: Hard stop hit ─────────────────────────────────────────────
     if atr_stop > 0 and cmp < atr_stop:
         return {**_base,
@@ -1835,6 +1949,20 @@ def get_hold_exit_signal(sd: dict, entry_price: float,
             "action": f"Tighten stop to ₹{atr_stop:,.2f}. Exit if price breaks below.",
         }
 
+    # ── Priority 3.5: 9-EMA momentum trail (armed only once in profit) ───────
+    if ema9 > 0 and pnl_pct > 0 and cmp < ema9:
+        if ema21 > 0 and ema9 < ema21:
+            return {**_base,
+                "signal": "EXIT", "color": C["red"], "urgency": "high",
+                "reason": f"9-EMA crossed below 21-EMA and CMP ₹{cmp:,.2f} < 9-EMA ₹{ema9:,.2f} — short-term uptrend broken",
+                "action": f"Exit the swing. Momentum trail ₹{ema9_stop:,.2f} breached; lock in +{pnl_pct:.1f}%.",
+            }
+        return {**_base,
+            "signal": "TRAIL", "color": C["amber"], "urgency": "medium",
+            "reason": f"CMP ₹{cmp:,.2f} closed below 9-EMA ₹{ema9:,.2f} — momentum cooling at +{pnl_pct:.1f}%",
+            "action": f"Tighten trail to ₹{ema9_stop:,.2f} (just under 9-EMA). Exit on a second close below; keep holding if it reclaims the 9-EMA.",
+        }
+
     # ── Priority 4: T2 hit — trail stop, ride T3 ─────────────────────────────
     if t2 > 0 and cmp >= t2:
         return {**_base,
@@ -1861,10 +1989,11 @@ def get_hold_exit_signal(sd: dict, entry_price: float,
 
     # ── Priority 7: All clear — hold the swing ────────────────────────────────
     pnl_str = f"{pnl_pct:+.1f}%"
-    return {
+    _trail_note = (f" 9-EMA trail ₹{ema9_stop:,.2f}." if ema9_stop > 0 else "")
+    return {**_base,
         "signal": "HOLD", "color": C["green"], "urgency": "low",
         "reason": f"Swing intact — Stage {stage}, Supertrend Bullish, score {total}/100 ({pnl_str} from entry)",
-        "action": f"Hold. Stop at ₹{atr_stop:,.2f}. Next target T1 ₹{t1:,.2f}.",
+        "action": f"Hold. Stop at ₹{atr_stop:,.2f}.{_trail_note} Next target T1 ₹{t1:,.2f}.",
     }
 
 # ── SCREENER ───────────────────────────────────────────────────────────────────
@@ -2225,9 +2354,26 @@ def tab_analyse(stocks_df, capital):
         st.markdown(f"<div style='margin-bottom:10px'>"
                     f"<span style='font-size:11px;font-family:DM Sans,sans-serif;color:{stage_col};font-weight:600'>"
                     f"{sd.get('stage_label','')}</span>&nbsp;&nbsp;{vcp_badge}</div>", unsafe_allow_html=True)
+        _bm = sd.get("brk_mode", "none")
+        _bm_badge = ""
+        if _bm == "confirmed":
+            _bm_badge = (f"<span style='background:{hex_rgba(C['green'],0.15)};color:{C['green']};"
+                         f"border:1px solid {C['green']}40;border-radius:4px;padding:1px 7px;font-size:11px'>"
+                         f"🚀 Breakout confirmed</span>")
+        elif _bm == "near":
+            _bm_badge = (f"<span style='background:{hex_rgba(C['amber'],0.15)};color:{C['amber']};"
+                         f"border:1px solid {C['amber']}40;border-radius:4px;padding:1px 7px;font-size:11px'>"
+                         f"🎯 Near breakout</span>")
+        elif _bm == "unconfirmed":
+            _bm_badge = (f"<span style='background:{hex_rgba(C['red'],0.15)};color:{C['red']};"
+                         f"border:1px solid {C['red']}40;border-radius:4px;padding:1px 7px;font-size:11px'>"
+                         f"⚠ Unconfirmed breakout</span>")
+        if _bm_badge:
+            st.markdown(f"<div style='margin-bottom:8px'>{_bm_badge}</div>", unsafe_allow_html=True)
         bt_line = ""
-        if sd["verdict"] == "WATCHLIST" and tr.get("breakout_trigger", 0) > 0:
-            bt_line = kpi_row("⚡ Breakout Confirm above", f"₹{tr['breakout_trigger']:,.2f}", C["amber"])
+        if sd["verdict"] in ("WATCHLIST", "STRONG BUY") and tr.get("breakout_trigger", 0) > 0:
+            _bt_lbl = "🚀 Breakout pivot (now support)" if _bm == "confirmed" else "⚡ Breakout Confirm above"
+            bt_line = kpi_row(_bt_lbl, f"₹{tr['breakout_trigger']:,.2f}", C["amber"])
         _eh_a = tr.get("entry_high", tr["entry"])
         _zone_str = (f"₹{tr['entry']:,.2f}  –  ₹{_eh_a:,.2f}"
                      if _eh_a > tr["entry"] + 0.50 else f"₹{tr['entry']:,.2f}")
@@ -2302,6 +2448,25 @@ def tab_analyse(stocks_df, capital):
             f"The verdict tells you the action: wait. "
             f"Set a price alert at ₹{_pb_high:,.2f} and revisit when price reaches that zone."
             f"</div></div>",
+            unsafe_allow_html=True)
+
+    # ── False-Breakout Warning Banner ─────────────────────────────────────────
+    if sd.get("brk_false"):
+        _cr = C["red"]; _ct = C["text"]; _cm = C["muted"]; _cg = C["green"]
+        _retest = sd["trade"]["entry"]
+        st.markdown(
+            f"<div style='background:{hex_rgba(_cr,0.12)};border:2px solid {_cr};"
+            f"border-radius:12px;padding:16px 20px;margin:10px 0 16px'>"
+            f"<div style='font-family:JetBrains Mono,monospace;font-size:16px;"
+            f"font-weight:700;color:{_cr}'>⚠ POSSIBLE FALSE BREAKOUT — DO NOT CHASE</div>"
+            f"<div style='font-family:DM Sans,sans-serif;font-size:13px;"
+            f"color:{_ct};margin-top:8px;line-height:1.7'>{sd.get('brk_reason','')}.</div>"
+            f"<div style='font-family:DM Sans,sans-serif;font-size:13px;"
+            f"color:{_cg};margin-top:10px;font-weight:600'>"
+            f"✅ Safer plan: wait for the pivot to hold on a retest "
+            f"(<span style='font-family:JetBrains Mono,monospace'>≈₹{_retest:,.2f}</span>) "
+            f"or a second close above it on ≥1.3× volume before entering.</div>"
+            f"</div>",
             unsafe_allow_html=True)
 
     # Chart
@@ -3124,7 +3289,7 @@ def tab_holdings():
         # Count for summary
         if signal == "HOLD":             hold_count    += 1
         elif signal in ("EXIT NOW","EXIT"): exit_count += 1
-        elif signal == "CAUTION":        caution_count += 1
+        elif signal in ("CAUTION","TRAIL"): caution_count += 1
         elif signal == "BOOK PARTIAL":   partial_count += 1
 
         # ── Card ──────────────────────────────────────────────────────────────
