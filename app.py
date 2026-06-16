@@ -228,16 +228,27 @@ def fetch_live_price(symbol: str) -> dict:
         t = yf.Ticker(symbol + ".NS")
         fi = t.fast_info
         price = float(fi.last_price)
-        # yfinance fast_info.previous_close is unreliable (often returns a 2-day-
-        # old close), which inflates the change %. Take the true prior-session
-        # close from the daily bars: during market hours the last bar is today's
-        # forming candle, so close[-2] is yesterday's actual close.
+        # yfinance fast_info.previous_close is unreliable (often a 2-day-old
+        # close), which inflates the change %. Derive the true prior-session close
+        # from the daily bars — but DON'T blindly use close[-2]: during market
+        # hours yfinance frequently has not yet created today's forming bar, so
+        # the last bar is already yesterday and close[-2] would be 2 sessions old
+        # (the APARINDS +6.22% bug). Decide by date: prev = the most recent close
+        # strictly before today's NSE session.
         prev = None
         try:
-            hist = t.history(period="5d")
+            hist   = t.history(period="7d")
             closes = hist["Close"].dropna()
-            if len(closes) >= 2:
-                prev = float(closes.iloc[-2])
+            if len(closes) >= 1:
+                last_date = closes.index[-1].date()
+                try:
+                    today_ist = pd.Timestamp.now(tz="Asia/Kolkata").date()
+                except Exception:
+                    today_ist = datetime.now().date()
+                if last_date >= today_ist and len(closes) >= 2:
+                    prev = float(closes.iloc[-2])   # today's bar present → prev is the one before
+                else:
+                    prev = float(closes.iloc[-1])   # today's bar absent → last bar IS prev session
         except Exception:
             prev = None
         if prev is None:
