@@ -259,6 +259,20 @@ def fetch_live_price(symbol: str) -> dict:
     except Exception:
         return {"price": 0.0, "change": 0.0, "pct": 0.0}
 
+
+def is_market_open() -> bool:
+    """True if the NSE cash session is open right now — Mon-Fri, 09:15-15:30 IST.
+    Best-effort by weekday + time; the exchange holiday calendar is not checked."""
+    try:
+        now = pd.Timestamp.now(tz="Asia/Kolkata")
+    except Exception:
+        return False
+    if now.weekday() >= 5:                      # Saturday / Sunday
+        return False
+    open_t  = now.replace(hour=9,  minute=15, second=0, microsecond=0)
+    close_t = now.replace(hour=15, minute=30, second=0, microsecond=0)
+    return open_t <= now <= close_t
+
 @st.cache_data(ttl=3600)
 def fetch_index() -> pd.DataFrame:
     try:
@@ -2058,8 +2072,9 @@ def _score_one(sym: str, nifty_ret: float = 0.0, market_regime: str = "Bullish")
         raw = fetch_ohlcv(sym)
         ind = add_indicators(raw)
         if len(ind) < 5: return None
-        live_px = fetch_live_price(sym).get("price", 0.0) or 0.0
-        sd = score(ind, nifty_ret=nifty_ret, live_price=live_px, market_regime=market_regime)
+        # Swing screener: score on the last completed daily candle only (no intraday
+        # live tick). Skipping the per-symbol live fetch also speeds up the scan.
+        sd = score(ind, nifty_ret=nifty_ret, live_price=0.0, market_regime=market_regime)
         tr = sd["trade"]
         rs_raw = _get_rs_raw(sym)
         mtf    = get_mtf_signal(sym)
@@ -2224,14 +2239,18 @@ def tab_analyse(stocks_df, capital):
             if len(df_ind) < 5:
                 st.error(f"Not enough price history for {sym}.")
                 return
-            live = fetch_live_price(sym)                         # ← fetch live price FIRST
-            live_px = live["price"] if live["price"] else 0.0   # 0 = fallback to last close
+            live = fetch_live_price(sym)        # for header display only — not for scoring
             try:
                 _reg = get_regime(fetch_ohlcv("^NSEI"))
             except Exception:
                 _reg = {"regime": "Bullish", "color": C["green"], "close": "—", "ma30w": "—", "rsi": "—"}
             _mkt_regime = _reg.get("regime", "Bullish")
-            sd   = score(df_ind, nifty_ret=fetch_nifty_3m_return(), live_price=live_px,
+            # Swing app: the verdict is computed on the LAST COMPLETED daily candle
+            # only. We deliberately do NOT inject the live intraday tick into scoring
+            # (live_price=0) — an intraday price mixed with stale EOD indicators
+            # produced verdicts that flipped through the day. The live price is still
+            # shown in the header for information, but it never drives the verdict.
+            sd   = score(df_ind, nifty_ret=fetch_nifty_3m_return(), live_price=0.0,
                          market_regime=_mkt_regime)
         except Exception as e:
             st.error(f"Could not load {sym}. Check the symbol or try again. ({e})")
@@ -2261,6 +2280,23 @@ def tab_analyse(stocks_df, capital):
         f"<span style='font-family:JetBrains Mono,monospace;font-size:28px;color:{C['text']};font-weight:500'>₹{price:,.2f}</span>"
         f"<span style='font-family:JetBrains Mono,monospace;font-size:15px;color:{chg_c}'>{sign}{chg:.2f} ({sign}{pct:.2f}%)</span>"
         f"</div></div></div>", unsafe_allow_html=True)
+
+    # ── Market session status — verdict is always on the last COMPLETED candle ──
+    _mkt_open = is_market_open()
+    try:
+        _last_candle = pd.to_datetime(df_ind["Date"].iloc[-1]).strftime("%d %b %Y")
+    except Exception:
+        _last_candle = "last close"
+    _ms_col = C["green"] if _mkt_open else C["muted"]
+    _ms_lbl = "● LIVE — NSE open" if _mkt_open else "○ NSE closed"
+    _ms_note = ("Live price shown for info; swing verdict uses the last completed daily candle."
+                if _mkt_open else "Swing verdict uses the last completed daily candle.")
+    st.markdown(
+        f"<div style='display:flex;gap:12px;align-items:center;margin-bottom:8px;"
+        f"font-family:DM Sans,sans-serif;font-size:12px'>"
+        f"<span style='color:{_ms_col};font-weight:700'>{_ms_lbl}</span>"
+        f"<span style='color:{C['muted']}'>Verdict as of candle <b style='color:{C['text']}'>{_last_candle}</b> · {_ms_note}</span>"
+        f"</div>", unsafe_allow_html=True)
 
     # ── Market Regime banner — gates long entries (Weinstein index-stage rule) ──
     _rg_name = _reg.get("regime", "Bullish")
@@ -2360,6 +2396,52 @@ def tab_analyse(stocks_df, capital):
         f"<span style='font-family:JetBrains Mono,monospace;font-size:17px;color:{C['muted']}'>/100</span></div>"
         f"<div style='display:flex;gap:9px;flex-wrap:wrap'>{_chips}</div>"
         f"</div></div>", unsafe_allow_html=True)
+
+    # ── Live "Action Now" overlay ─────────────────────────────────────────────
+    # The verdict above is EOD-stable (last completed candle). THIS line is the
+    # live part: it compares the current price to the (fixed) entry zone /
+    # breakout trigger / stop so you get an actionable read during market hours
+    # WITHOUT the verdict whipsawing. No indicators are recomputed here — just
+    # price-vs-level comparisons, which is all that can honestly be "live".
+    _lv   = float(live.get("price", 0) or sd["cmp"])
+    _e    = float(_trh["entry"]); _eh = float(_trh.get("entry_high", _e))
+    _slv  = float(_trh["sl"]);    _trig = float(_trh.get("breakout_trigger", 0) or 0)
+    _an_ico, _an_col, _an_txt = "○", C["muted"], ""
+    if _v == "AVOID":
+        _an_ico, _an_col = "⛔", C["red"]
+        _an_txt = "Failed the trend / risk / regime gate — no action. Stand aside."
+    elif _v == "EXTENDED – WAIT":
+        _an_ico, _an_col = "⏳", C["amber"]
+        _an_txt = f"Over-extended. Wait for a pullback toward ₹{_e:,.2f} before acting."
+    elif _lv <= 0:
+        _an_txt = "Live price unavailable — use the entry levels below."
+    elif _lv < _slv:
+        _an_ico, _an_col = "⛔", C["red"]
+        _an_txt = f"Live ₹{_lv:,.2f} is BELOW the stop ₹{_slv:,.2f} — setup invalidated, do not enter."
+    elif _e <= _lv <= _eh:
+        _an_ico, _an_col = "✅", C["green"]
+        _an_txt = f"Live ₹{_lv:,.2f} is INSIDE the entry zone ₹{_e:,.2f}–₹{_eh:,.2f}. Buy now (limit); stop ₹{_slv:,.2f}."
+    elif _lv < _e:
+        _an_ico, _an_col = "🟢", C["green"]
+        _an_txt = f"Live ₹{_lv:,.2f} is below optimal entry ₹{_e:,.2f} ({(_lv-_e)/_e*100:+.1f}%) — even better price. Buy toward ₹{_e:,.2f}."
+    elif _trig > 0 and _lv >= _trig:
+        _an_ico, _an_col = "🚀", C["green"]
+        _an_txt = f"Live ₹{_lv:,.2f} is ABOVE the breakout trigger ₹{_trig:,.2f} — breakout confirming. Enter on strength; confirm with a daily close above ₹{_trig:,.2f}."
+    elif _trig > 0:
+        _an_ico, _an_col = "⚠", C["amber"]
+        _an_txt = f"Live ₹{_lv:,.2f} is above the buy zone (₹{_eh:,.2f}) but below the breakout trigger ₹{_trig:,.2f}. Don't chase — wait for a pullback into ₹{_e:,.2f}–₹{_eh:,.2f} or a close above ₹{_trig:,.2f}."
+    else:
+        _an_ico, _an_col = "⚠", C["amber"]
+        _an_txt = f"Live ₹{_lv:,.2f} is above the buy zone (₹{_eh:,.2f}). Don't chase — wait for a pullback to ₹{_e:,.2f}–₹{_eh:,.2f}."
+    _an_tag = "● LIVE" if _mkt_open else "○ last price"
+    st.markdown(
+        f"<div style='background:{hex_rgba(_an_col,0.10)};border:1px solid {hex_rgba(_an_col,0.45)};"
+        f"border-radius:12px;padding:11px 16px;margin-bottom:16px;display:flex;gap:12px;align-items:center'>"
+        f"<span style='font-size:18px'>{_an_ico}</span>"
+        f"<div style='font-family:DM Sans,sans-serif;font-size:13px;color:{C['text']};line-height:1.5'>"
+        f"<b style='color:{_an_col};text-transform:uppercase;letter-spacing:.05em;font-size:11px'>Action Now "
+        f"<span style='color:{C['muted']}'>· {_an_tag}</span></b><br>{_an_txt}</div></div>",
+        unsafe_allow_html=True)
 
     # ── Watchlist toggle ──────────────────────────────────────────────────────
     _in_wl = sym in {w["symbol"] for w in load_watchlist()}
